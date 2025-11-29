@@ -8,16 +8,12 @@
   ],
   "routes": [
     {
-      "handle": "filesystem",
-      "src": "/(.*)",
-      "dest": "/$1"
+      "src": "/api/(.*)",
+      "dest": "server.js"
     },
     {
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ],
-  "buildCommand": "echo \"构建完成\"",
-  "installCommand": "npm install",
-  "outputDirectory": "."
+  ]
 }

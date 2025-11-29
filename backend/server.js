@@ -27,8 +27,19 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 静态文件服务（用于图片上传）
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 静态文件服务（用于图片上传） - 添加错误处理以防uploads目录不存在
+const uploadsPath = path.join(__dirname, 'uploads');
+try {
+  // 尝试访问uploads目录，如果不存在则不会启用静态文件服务
+  const fs = require('fs');
+  if (fs.existsSync(uploadsPath)) {
+    app.use('/uploads', express.static(uploadsPath));
+  } else {
+    console.log('⚠️ uploads目录不存在，静态文件服务已禁用');
+  }
+} catch (error) {
+  console.log('⚠️ 初始化静态文件服务时出错:', error.message);
+}
 
 // 路由配置
 app.use('/api/users', userRoutes);
