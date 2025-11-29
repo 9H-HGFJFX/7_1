@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>极简测试 - 修复版本</title>
+    <script>
+        console.log('Start of script - fixed version');
+        console.log('Timestamp:', new Date().toISOString());
+        console.log('Before any imports, window.getUserInfo exists:', 'getUserInfo' in window);
+    </script>
+    <script type="module">
+        console.log('Starting module import');
+        try {
+            console.log('Attempting to import auth.js');
+            const auth = await import('./components/auth.js');
+            console.log('auth.js imported successfully');
+            console.log('Import result:', auth);
+        } catch (e) {
+            console.error('Error importing auth.js:', e);
+        }
+    </script>
+</head>
+<body>
+    <h1>极简测试页面 - 修复版本</h1>
+    <p>测试模块导入功能是否正常工作</p>
+</body>
+</html>

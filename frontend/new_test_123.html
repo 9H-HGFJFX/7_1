@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>New Test</title>
+</head>
+<body>
+    <h1>New Test with Different Names</h1>
+    <div id="output"></div>
+
+    <!-- 使用完全不同的变量名和方法 -->
+    <script>
+        function appendOutput(text) {
+            document.getElementById('output').innerHTML += text + '<br>';
+            console.log(text);
+        }
+        
+        appendOutput('Starting new test...');
+        appendOutput('Current time: ' + new Date().toISOString());
+        
+        // 声明一些变量，但绝对不使用getUserInfo相关名称
+        const testData = { message: 'This is a test' };
+        const displayMessage = function() {
+            return 'Message: ' + testData.message;
+        };
+        
+        appendOutput(displayMessage());
+        appendOutput('Test completed successfully!');
+    </script>
+</body>
+</html>

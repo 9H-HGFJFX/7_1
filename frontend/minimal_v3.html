@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>极简测试 - 版本3</title>
+    <meta name="cache-control" content="no-cache">
+    <script>
+        console.log('Start of script - version 3');
+        console.log('Timestamp:', new Date().toISOString());
+        console.log('Before any imports, window.getUserInfo exists:', 'getUserInfo' in window);
+        console.log('End of initial script');
+    </script>
+    <script type="module">
+        console.log('Starting module import');
+        try {
+            console.log('Attempting to import test_export.js');
+            await import('./test_export.js');
+            console.log('test_export.js imported successfully');
+        } catch (e) {
+            console.error('Error importing test_export.js:', e);
+        }
+    </script>
+</head>
+<body>
+    <h1>极简测试页面 - 版本3</h1>
+    <p>测试模块导入功能</p>
+</body>
+</html>

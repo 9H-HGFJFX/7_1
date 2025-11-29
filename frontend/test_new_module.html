@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test New Module</title>
+</head>
+<body>
+    <h1>Testing New Module Import</h1>
+    <div id="result"></div>
+
+    <script type="module">
+        console.log('Trying to import auth_module.js...');
+        try {
+            import('./components/auth_module.js').then(module => {
+                console.log('auth_module.js imported successfully!');
+                const result = module.default.hello();
+                console.log('Module result:', result);
+                document.getElementById('result').textContent = 'SUCCESS: ' + result;
+            }).catch(error => {
+                console.error('Error importing auth_module.js:', error);
+                document.getElementById('result').textContent = 'ERROR: ' + error.message;
+            });
+        } catch (error) {
+            console.error('Try-catch error:', error);
+            document.getElementById('result').textContent = 'TRY-CATCH ERROR: ' + error.message;
+        }
+    </script>
+</body>
+</html>

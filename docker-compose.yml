@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # MongoDB数据库服务
+  mongodb:
+    image: mongo:5.0
+    container_name: mongodb
+    restart: always
+    volumes:
+      - mongodb_data:/data/db
+      - ./backend/config/mongod.conf:/etc/mongod.conf:ro  # 只读挂载配置文件
+    command: mongod --config /etc/mongod.conf
+    networks:
+      - app-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+      - MONGO_INITDB_DATABASE=news_app
+    # 生产环境不暴露数据库端口，只在内部网络访问
+    # ports:
+    #   - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 后端API服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: always
+    networks:
+      - app-network
+    depends_on:
+      mongodb:
+        condition: service_healthy  # 等待MongoDB健康检查通过
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - MONGODB_URI=mongodb://admin:secret@mongodb:27017/news_app?authSource=admin
+      # 注意：敏感信息如JWT_SECRET应在部署时通过环境变量注入
+    volumes:
+      - ./backend/logs:/app/logs:rw
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 前端Web服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+    depends_on:
+      backend:
+        condition: service_healthy  # 等待后端健康检查通过
+    # 前端服务不需要持久化存储
+
+networks:
+  app-network:
+    driver: bridge
+    # 可选：使用自定义子网
+    # ipam:
+    #   config:
+    #     - subnet: 172.28.0.0/16
+
+volumes:
+  mongodb_data:
+    driver: local
+    # 可选：使用外部卷存储数据
+    # external: true
+    # name: project_mongodb_data

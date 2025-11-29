@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { margin: 10px 0; padding: 10px; border: 1px solid #ddd; background-color: #f5f5f5; }
+        .error { background-color: #ffebee; color: #c62828; }
+        .success { background-color: #e8f5e9; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="logs"></div>
+
+    <script>
+        // 辅助函数：记录日志到页面
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = message;
+            logsDiv.appendChild(logEntry);
+            console.log(type.toUpperCase() + ': ' + message);
+        }
+
+        // 测试前检查全局变量
+        log('Before any imports:');
+        if (typeof window.getUserInfo !== 'undefined') {
+            log('getUserInfo already exists in window BEFORE imports!', 'error');
+        } else {
+            log('getUserInfo does NOT exist in window BEFORE imports', 'success');
+        }
+
+        // 列出所有以getUser开头的全局变量
+        for (const key in window) {
+            if (key.startsWith('getUser')) {
+                log(`Found global variable: ${key}`, 'info');
+            }
+        }
+    </script>
+
+    <!-- 首先导入storage.js -->
+    <script type="module">
+        log('Trying to import storage.js...');
+        try {
+            import('/utils/storage.js').then(module => {
+                log('storage.js imported successfully!', 'success');
+                log('After storage.js import:');
+                if (typeof window.getUserInfo !== 'undefined') {
+                    log('getUserInfo exists in window AFTER storage.js import', 'error');
+                } else {
+                    log('getUserInfo does NOT exist in window AFTER storage.js import', 'success');
+                }
+            }).catch(error => {
+                log('Error importing storage.js: ' + error.message, 'error');
+            });
+        } catch (error) {
+            log('Try-catch error importing storage.js: ' + error.message, 'error');
+        }
+    </script>
+
+    <!-- 延迟测试api.js导入 -->
+    <script>
+        setTimeout(() => {
+            log('\nWaiting 1 second before testing api.js import...');
+            const apiScript = document.createElement('script');
+            apiScript.type = 'module';
+            apiScript.textContent = `
+                import('/utils/api.js').then(module => {
+                    log('api.js imported successfully!', 'success');
+                    log('After api.js import:');
+                    if (typeof window.getUserInfo !== 'undefined') {
+                        log('getUserInfo exists in window AFTER api.js import', 'error');
+                    } else {
+                        log('getUserInfo does NOT exist in window AFTER api.js import', 'success');
+                    }
+                }).catch(error => {
+                    log('Error importing api.js: ' + error.message, 'error');
+                });
+            `;
+            document.body.appendChild(apiScript);
+        }, 1000);
+    </script>
+</body>
+</html>

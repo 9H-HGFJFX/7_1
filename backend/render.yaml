@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: anti-fake-news-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        sync: false  # 部署时在Render控制台设置实际的MongoDB Atlas连接字符串
+      - key: JWT_SECRET
+        sync: false  # 部署时设置实际的JWT密钥
+      - key: JWT_EXPIRES_IN
+        value: 24h
+
+  # 数据库服务 - Render不提供MongoDB，但我们将使用MongoDB Atlas
+  # 数据库连接字符串需要在Render控制台中手动配置

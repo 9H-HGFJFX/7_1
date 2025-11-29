@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auth.js</title>
+</head>
+<body>
+    <h1>Testing auth.js Import</h1>
+    <div id="result"></div>
+
+    <script type="module">
+        try {
+            console.log('Attempting to import auth.js');
+            const auth = await import('./components/auth.js');
+            document.getElementById('result').innerHTML = '<p style="color: green;">auth.js imported successfully!</p>';
+            console.log('Import result:', auth);
+        } catch (e) {
+            document.getElementById('result').innerHTML = '<p style="color: red;">Error importing auth.js: ' + e.message + '</p>';
+            console.error('Error:', e);
+        }
+    </script>
+</body>
+</html>

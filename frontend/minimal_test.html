@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Test</title>
+</head>
+<body>
+    <h1>Minimal Test</h1>
+    <div id="result"></div>
+
+    <!-- 测试脚本 - 完全独立，不导入任何模块 -->
+    <script>
+        // 显示初始状态
+        document.getElementById('result').textContent = 'Starting test...';
+        console.log('Starting minimal test...');
+        
+        // 检查全局作用域中的getUserInfo
+        console.log('Before any operations:');
+        if (typeof window.getUserInfo !== 'undefined') {
+            console.error('CRITICAL: getUserInfo already exists in window BEFORE any operations!');
+            document.getElementById('result').textContent = 'ERROR: getUserInfo exists before any operations';
+        } else {
+            console.log('getUserInfo does NOT exist in window BEFORE any operations');
+            document.getElementById('result').textContent = 'Initial state: getUserInfo not found';
+        }
+        
+        // 尝试手动声明和删除全局变量
+        try {
+            console.log('\nTesting global variable declaration...');
+            // 测试1: 声明全局变量
+            window.testVar = 'test';
+            console.log('Test variable declared successfully');
+            
+            // 测试2: 删除全局变量
+            delete window.testVar;
+            console.log('Test variable deleted successfully');
+            
+            // 测试3: 检查是否存在getUserInfo相关的全局变量
+            console.log('\nSearching for getUserInfo related global variables:');
+            let found = false;
+            for (const key in window) {
+                if (key.includes('UserInfo') || key.includes('getUser')) {
+                    console.log(`Found: ${key}`, window[key]);
+                    found = true;
+                }
+            }
+            if (!found) {
+                console.log('No getUserInfo related global variables found');
+            }
+            
+            document.getElementById('result').textContent += '\nGlobal variable tests completed';
+        } catch (error) {
+            console.error('Error in global variable tests:', error);
+            document.getElementById('result').textContent += '\nError in global tests: ' + error.message;
+        }
+    </script>
+</body>
+</html>

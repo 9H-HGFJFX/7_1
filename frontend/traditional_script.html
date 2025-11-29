@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traditional Script Test</title>
+</head>
+<body>
+    <h1>Testing Traditional Script Tag</h1>
+    <div id="result"></div>
+
+    <!-- 传统的script标签，不使用ES模块 -->
+    <script src="test_export.js"></script>
+    <script>
+        console.log('Traditional script loading...');
+        try {
+            // 直接访问全局变量
+            if (typeof test === 'function') {
+                const result = test();
+                console.log('Test function result:', result);
+                document.getElementById('result').textContent = 'SUCCESS: ' + result;
+            } else {
+                console.error('Test function not found');
+                document.getElementById('result').textContent = 'ERROR: Test function not found';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('result').textContent = 'ERROR: ' + error.message;
+        }
+    </script>
+</body>
+</html>

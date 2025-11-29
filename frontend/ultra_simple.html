@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ultra Simple Test</title>
+</head>
+<body>
+    <h1>Ultra Simple Test</h1>
+    <div id="result"></div>
+
+    <script>
+        // 只检查window对象，不尝试声明任何变量
+        document.getElementById('result').innerHTML = 
+            '<h2>Window Object Inspection</h2>' +
+            '<p>getUserInfo exists in window: ' + (window.hasOwnProperty('getUserInfo') ? 'YES' : 'NO') + '</p>' +
+            '<p>Type of window.getUserInfo: ' + (typeof window.getUserInfo) + '</p>' +
+            '<p>Value: ' + String(window.getUserInfo) + '</p>' +
+            '<hr>' +
+            '<h2>Keys in Window Object:</h2>' +
+            '<pre>' + Object.keys(window).filter(k => k.includes('User') || k.includes('user')).join('\n') + '</pre>';
+        
+        console.log('Ultra simple test started');
+        console.log('getUserInfo in window:', window.hasOwnProperty('getUserInfo'));
+        console.log('Type:', typeof window.getUserInfo);
+        console.log('Value:', window.getUserInfo);
+    </script>
+</body>
+</html>

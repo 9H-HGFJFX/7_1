@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Simple Module</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .error { background-color: #ffebee; color: #c62828; }
+        .success { background-color: #e8f5e9; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>Testing Simple Module Import</h1>
+    <div id="logs"></div>
+
+    <script>
+        // 辅助函数：记录日志到页面
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log ${type}`;
+            logEntry.textContent = message;
+            logsDiv.appendChild(logEntry);
+            console.log(type.toUpperCase() + ': ' + message);
+        }
+
+        // 测试前检查全局变量
+        log('Before module import:');
+        if (typeof window.getUserInfo !== 'undefined') {
+            log('getUserInfo exists in window BEFORE import!', 'error');
+        } else {
+            log('getUserInfo does NOT exist in window BEFORE import', 'success');
+        }
+    </script>
+
+    <!-- 导入简单模块 -->
+    <script type="module">
+        log('Trying to import simple_module.js...');
+        try {
+            import('./simple_module.js').then(module => {
+                log('simple_module.js imported successfully!', 'success');
+                log('Module name:', module.testModule.name);
+                log('Module function result:', module.testFunction());
+                
+                log('\nAfter module import:');
+                if (typeof window.getUserInfo !== 'undefined') {
+                    log('getUserInfo exists in window AFTER import', 'error');
+                } else {
+                    log('getUserInfo does NOT exist in window AFTER import', 'success');
+                }
+            }).catch(error => {
+                log('Error importing simple_module.js: ' + error.message, 'error');
+                log('Error stack: ' + error.stack, 'error');
+            });
+        } catch (error) {
+            log('Try-catch error importing simple_module.js: ' + error.message, 'error');
+        }
+    </script>
+</body>
+</html>

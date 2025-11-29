@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raw JavaScript Test</title>
+    <style>
+        body { font-family: monospace; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>Raw JavaScript Test</h1>
+    <div id="output"></div>
+
+    <script>
+        // 简单的输出函数
+        function output(text) {
+            document.getElementById('output').textContent += text + '\n';
+            console.log(text);
+        }
+        
+        output('=== STARTING RAW TEST ===');
+        output('Timestamp: ' + new Date().toISOString());
+        
+        // 清空可能的全局变量（如果有权限）
+        try {
+            output('\nAttempting to clear any existing getUserInfo...');
+            if (window.hasOwnProperty('getUserInfo')) {
+                output('FOUND EXISTING getUserInfo BEFORE TEST!');
+                output('Type: ' + typeof window.getUserInfo);
+                output('Value: ' + String(window.getUserInfo));
+                delete window.getUserInfo;
+                output('Attempted to delete getUserInfo');
+            } else {
+                output('No existing getUserInfo found');
+            }
+        } catch (e) {
+            output('ERROR clearing getUserInfo: ' + e.message);
+        }
+        
+        // 检查所有与user相关的全局变量
+        output('\nChecking for user-related global variables:');
+        for (const key in window) {
+            if (key.includes('user') || key.includes('User') || key.includes('auth') || key.includes('Auth')) {
+                output(`Global: ${key} (type: ${typeof window[key]})`);
+            }
+        }
+        
+        // 测试声明一个新变量
+        output('\nTesting variable declaration...');
+        try {
+            // 直接在全局作用域中声明变量
+            output('Trying to declare global testVar...');
+            testVar = 'test value';
+            output('testVar declared successfully');
+            output('testVar value: ' + testVar);
+            
+            // 测试声明getUserInfo（应该会失败）
+            output('\nTrying to declare getUserInfo...');
+            getUserInfo = function() { return 'test'; };
+            output('SUCCESS: getUserInfo declared');
+        } catch (e) {
+            output('ERROR declaring getUserInfo: ' + e.message);
+            output('Error stack: ' + e.stack);
+        }
+        
+        // 检查document对象中的脚本
+        output('\nChecking document scripts:');
+        const scripts = document.getElementsByTagName('script');
+        for (let i = 0; i < scripts.length; i++) {
+            output(`Script ${i}: ${scripts[i].src || '(inline)'} - type: ${scripts[i].type || '(default)'}`);
+        }
+        
+        output('\n=== TEST COMPLETED ===');
+    </script>
+</body>
+</html>

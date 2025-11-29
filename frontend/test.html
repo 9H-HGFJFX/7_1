@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试页面 - 详细调试</title>
+    <script>
+        // 在任何导入之前检查全局命名空间
+        console.log('=== GLOBAL NAMESPACE CHECK ===');
+        console.log('Before any imports, getUserInfo in window:', 'getUserInfo' in window);
+        
+        // 列出所有全局变量，查找可能的冲突
+        console.log('=== GLOBAL VARIABLES ===');
+        const globalVars = [];
+        for (const key in window) {
+            if (Object.prototype.hasOwnProperty.call(window, key)) {
+                if (key.includes('user') || key.includes('auth')) {
+                    globalVars.push(key);
+                }
+            }
+        }
+        console.log('User/Auth related global variables:', globalVars);
+    </script>
+</head>
+<body>
+    <h1>测试页面 - 详细调试</h1>
+    <p>用于诊断JavaScript模块加载问题</p>
+    <p>时间戳: <span id="timestamp"></span></p>
+    <pre id="output"></pre>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+        
+        // 记录加载时间
+        console.log('test.html script started at', new Date().toISOString());
+        
+        // 辅助函数：记录输出到页面
+        function logToPage(message) {
+            const output = document.getElementById('output');
+            output.textContent += message + '\n';
+            console.log(message);
+        }
+        
+        // 尝试导入各个模块，逐个测试
+        async function testModules() {
+            try {
+                logToPage('尝试导入storage.js...');
+                await import('./utils/storage.js');
+                logToPage('storage.js 导入成功');
+            } catch (e) {
+                logToPage('storage.js 导入失败: ' + e);
+                console.error('storage.js 导入失败:', e);
+            }
+            
+            try {
+                logToPage('尝试导入api.js...');
+                await import('./utils/api.js');
+                logToPage('api.js 导入成功');
+            } catch (e) {
+                logToPage('api.js 导入失败: ' + e);
+                console.error('api.js 导入失败:', e);
+            }
+            
+            try {
+                logToPage('尝试导入auth.js...');
+                await import('./components/auth.js');
+                logToPage('auth.js 导入成功');
+            } catch (e) {
+                logToPage('auth.js 导入失败: ' + e);
+                console.error('auth.js 导入失败:', e);
+                logToPage('Error details: ' + e.stack);
+            }
+            
+            // 最后再检查一次全局命名空间
+            logToPage('=== FINAL GLOBAL CHECK ===');
+            logToPage('getUserInfo in window after imports: ' + ('getUserInfo' in window));
+        }
+        
+        testModules();
+    </script>
+</body>
+</html>
