@@ -27,12 +27,6 @@
     }
   ],
   "routes": [
- 
-    {
-      "src": "(.*)",
-      "dest": "$1"
-    },
-
     {
       "src": "/api/(.*)",
       "dest": "https://anti-fake-news-backend.onrender.com/api/$1",
@@ -43,10 +37,13 @@
         "Access-Control-Allow-Headers": "Content-Type, Authorization"
       }
     },
-
+    {
+      "src": "^/[^.]+$",
+      "dest": "/index.html"
+    },
     {
       "src": "(.*)",
-      "dest": "/index.html"
+      "dest": "$1"
     }
   ],
   "headers": [
