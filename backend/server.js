@@ -77,10 +77,10 @@ app.get('/', (req, res) => {
 // 日志中间件
 app.use(logger);
 
-// 404错误处理
+// 404 Error Handler
 app.use(notFoundHandler);
 
-// 全局错误处理中间件
+// Global error handling middleware
 app.use(globalErrorHandler);
 
 // Database connection and server startup
