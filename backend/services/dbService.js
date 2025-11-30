@@ -26,17 +26,17 @@ class DatabaseService {
     getMongooseOptions() {
         return {
             serverSelectionTimeoutMS: 10000, // 增加超时时间
-            socketTimeoutMS: 20000, // 进一步减少超时时间
+            socketTimeoutMS: 20000,
             family: 4,
             // 针对无服务器环境的最小化配置
             keepAlive: true,
             keepAliveInitialDelay: 3000,
-            poolSize: 1, // 最小连接池
+            minPoolSize: 1, // 使用新版驱动支持的最小连接池设置
+            maxPoolSize: 5, // 最大连接池大小
             autoIndex: false,
             // 禁用缓冲区，避免内存泄漏
             bufferCommands: false,
-            // 禁用自动重新连接，让Vercel处理
-            autoReconnect: false
+            // autoReconnect选项已被移除，由MongoDB驱动自动处理
         };
     }
 

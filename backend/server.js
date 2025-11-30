@@ -61,19 +61,41 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 静态文件服务（用于图片上传） - 添加错误处理以防uploads目录不存在
+// 静态文件服务配置 - 支持favicon和上传文件
+const fs = require('fs');
+
+// 启用public文件夹的静态文件服务，用于提供favicon等资源
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  console.log('✅ 静态文件服务已启用: /public');
+} else {
+  console.log('⚠️ public目录不存在，静态文件服务已部分禁用');
+}
+
+// 文件上传目录的静态服务
 const uploadsPath = path.join(__dirname, 'uploads');
 try {
   // 尝试访问uploads目录，如果不存在则不会启用静态文件服务
-  const fs = require('fs');
   if (fs.existsSync(uploadsPath)) {
     app.use('/uploads', express.static(uploadsPath));
+    console.log('✅ 上传文件服务已启用: /uploads');
   } else {
-    console.log('⚠️ uploads目录不存在，静态文件服务已禁用');
+    console.log('⚠️ uploads目录不存在，上传文件服务已禁用');
   }
 } catch (error) {
   console.log('⚠️ 初始化静态文件服务时出错:', error.message);
 }
+
+// 显式处理favicon.ico请求
+app.get('/favicon.ico', (req, res) => {
+  const faviconPath = path.join(publicDir, 'favicon.ico');
+  if (fs.existsSync(faviconPath)) {
+    res.sendFile(faviconPath);
+  } else {
+    res.status(404).end();
+  }
+})
 
 // 路由配置
 app.use('/api/users', userRoutes);
@@ -203,9 +225,13 @@ async function startServer() {
     }, 15000);
     
     try {
-      await dbService.connect();
+      const connection = await dbService.connect();
       clearTimeout(dbConnectTimeout);
-      console.log('✅ 数据库连接成功');
+      if (connection && dbService.isConnected) {
+        console.log('✅ 数据库连接成功');
+      } else {
+        console.error('⚠️  数据库连接失败，但服务器将继续运行');
+      }
     } catch (dbError) {
       clearTimeout(dbConnectTimeout);
       console.error('⚠️  数据库连接失败，但服务器将继续运行:', dbError.message);

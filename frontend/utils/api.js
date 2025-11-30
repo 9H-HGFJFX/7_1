@@ -5,8 +5,9 @@
 
 import { getToken } from './storage.js';
 
-// API基础URL配置 - 支持从环境变量读取
-const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
+// API基础URL配置 - 在浏览器环境中使用全局变量或默认值
+// 在生产环境中，部署时需要确保正确设置API_URL
+const API_BASE_URL = window.API_URL || 'https://anti-fake-news-backend.onrender.com/api' || 'http://localhost:3001/api';
 
 // 请求超时设置（毫秒）
 const REQUEST_TIMEOUT = 10000;

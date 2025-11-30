@@ -1,66 +1,73 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>社交反假新闻系统</title>
+    <title>Social Anti-Fake News System</title>
     <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Environment Variables Configuration -->
+    <script>
+        // Set global API_URL variable for API calls
+        window.API_URL = 'https://anti-fake-news-backend.onrender.com/api';
+        // Note: This URL should be modified according to the actual environment during deployment
+    </script>
 </head>
 <body>
-    <!-- 导航栏 -->
+    <!-- Navigation Bar -->
     <header id="navbar">
         <nav>
             <div class="logo">
-                <h1>社交反假新闻系统</h1>
+                <h1>Social Anti-Fake News System</h1>
             </div>
             <div class="nav-links">
-                <a href="index.html">首页</a>
-                <a href="submit.html" id="submit-news-link">提交新闻</a>
+                <a href="index.html">Home</a>
+                <a href="submit.html" id="submit-news-link">Submit News</a>
                 <div id="user-menu">
-                    <a href="login.html" id="login-link">登录</a>
-                    <a href="register.html" id="register-link">注册</a>
+                    <a href="login.html" id="login-link">Login</a>
+                    <a href="register.html" id="register-link">Register</a>
                     <div id="profile-menu" style="display: none;">
-                        <a href="profile.html" id="profile-link">个人中心</a>
-                        <button id="logout-btn">退出登录</button>
+                        <a href="profile.html" id="profile-link">Profile</a>
+                        <button id="logout-btn">Logout</button>
                     </div>
                 </div>
             </div>
         </nav>
     </header>
 
-    <!-- 主内容区域 -->
+    <!-- Main Content Area -->
     <main>
-        <!-- 筛选和搜索区域 -->
+        <!-- Filter and Search Area -->
         <section class="filter-section">
             <div class="filter-options">
-                <label for="status-filter">状态筛选：</label>
+                <label for="status-filter">Status Filter:</label>
                 <select id="status-filter">
-                    <option value="all">全部新闻</option>
-                    <option value="fake">假新闻</option>
-                    <option value="not-fake">非假新闻</option>
-                    <option value="pending">待验证</option>
+                    <option value="all">All News</option>
+                    <option value="fake">Fake News</option>
+                    <option value="not-fake">Not Fake News</option>
+                    <option value="pending">Pending</option>
                 </select>
             </div>
             
             <div class="search-box">
-                <input type="text" id="search-input" placeholder="搜索新闻主题、详情或提交人...">
-                <button id="search-btn">搜索</button>
+                <input type="text" id="search-input" placeholder="Search news topic, details or submitter...">
+                <button id="search-btn">Search</button>
             </div>
         </section>
 
-        <!-- 新闻列表容器 -->
+        <!-- News List Container -->
         <section id="news-list-container">
-            <div class="loading" id="loading-indicator">加载中...</div>
+            <div class="loading" id="loading-indicator">Loading...</div>
             <div id="news-list"></div>
             
-            <!-- 分页控制 -->
+            <!-- Pagination Control -->
             <div id="pagination"></div>
         </section>
     </main>
 
-    <!-- 页脚 -->
+    <!-- Footer -->
     <footer>
-        <p>&copy; 2025 社交反假新闻系统 - SE331项目</p>
+        <p>&copy; 2025 Social Anti-Fake News System - SE331 Project</p>
     </footer>
 
     <!-- 引入JavaScript模块 -->
