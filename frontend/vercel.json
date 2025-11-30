@@ -29,7 +29,8 @@
   "routes": [
  
     {
-      "handle": "filesystem"
+      "src": "(.*)",
+      "dest": "$1"
     },
 
     {
@@ -44,7 +45,6 @@
     },
 
     {
-      "handle": "rewrite",
       "src": "(.*)",
       "dest": "/index.html"
     }
