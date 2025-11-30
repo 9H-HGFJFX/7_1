@@ -8,7 +8,7 @@ const { successResponse, errorResponse, paginatedResponse } = require('../middle
 const router = express.Router();
 
 /**
- * 获取新闻列表（支持分页、筛选、搜索）
+ * Get news list (supports pagination, filtering, searching)
  */
 router.get('/', async (req, res, next) => {
     try {
@@ -68,7 +68,7 @@ router.get('/', async (req, res, next) => {
             result.page,
             result.pageSize,
             result.pageCount,
-            '获取新闻列表成功'
+            'News list retrieved successfully'
         ));
     } catch (error) {
         next(error);
@@ -76,7 +76,7 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
- * 获取新闻详情
+ * Get news details
  */
 router.get('/:newsId', async (req, res, next) => {
     try {
@@ -86,13 +86,13 @@ router.get('/:newsId', async (req, res, next) => {
         const news = await News.findById(newsId).populate('authorId', 'firstName lastName email');
         
         if (!news) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 格式化响应数据
         const formattedNews = {
             ...news.toObject(),
-            authorName: news.authorId ? `${news.authorId.firstName} ${news.authorId.lastName}` : '未知用户',
+            authorName: news.authorId ? `${news.authorId.firstName} ${news.authorId.lastName}` : 'Unknown User',
             authorId: news.authorId?._id || news.authorId,
             userVote: null
         };
@@ -107,24 +107,24 @@ router.get('/:newsId', async (req, res, next) => {
             formattedNews.userVote = userVote?.voteResult || null;
         }
         
-        return res.json(successResponse(formattedNews, '获取新闻详情成功'));
+        return res.json(successResponse(formattedNews, 'News details retrieved successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 成员：提交新闻
+ * Member: Submit news
  */
 router.post('/', authenticate, isMemberOrAdmin, [
-    body('title').notEmpty().withMessage('新闻主题不能为空'),
-    body('content').notEmpty().withMessage('新闻详情不能为空')
+    body('title').notEmpty().withMessage('News title cannot be empty'),
+    body('content').notEmpty().withMessage('News content cannot be empty')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { title, content, images = [] } = req.body;
@@ -149,24 +149,24 @@ router.post('/', authenticate, isMemberOrAdmin, [
             authorName: `${req.user.firstName} ${req.user.lastName}`
         };
         
-        return res.status(201).json(successResponse(formattedNews, '新闻提交成功'));
+        return res.status(201).json(successResponse(formattedNews, 'News submitted successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 作者或管理员：更新新闻
+ * Author or Admin: Update news
  */
 router.put('/:newsId', authenticate, checkOwnership('News', 'newsId', News), [
-    body('title').optional().notEmpty().withMessage('新闻主题不能为空'),
-    body('content').optional().notEmpty().withMessage('新闻详情不能为空')
+    body('title').optional().notEmpty().withMessage('News title cannot be empty'),
+    body('content').optional().notEmpty().withMessage('News content cannot be empty')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { newsId } = req.params;
@@ -185,24 +185,24 @@ router.put('/:newsId', authenticate, checkOwnership('News', 'newsId', News), [
         ).populate('authorId', 'firstName lastName email');
         
         if (!updatedNews) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 格式化响应数据
         const formattedNews = {
             ...updatedNews.toObject(),
-            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : '未知用户',
+            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : 'Unknown User',
             authorId: updatedNews.authorId?._id || updatedNews.authorId
         };
         
-        return res.json(successResponse(formattedNews, '新闻更新成功'));
+        return res.json(successResponse(formattedNews, 'News updated successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：删除新闻
+ * Admin: Delete news
  */
 router.delete('/:newsId', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -212,28 +212,28 @@ router.delete('/:newsId', authenticate, isAdmin, async (req, res, next) => {
         const deletedNews = await News.findByIdAndDelete(newsId);
         
         if (!deletedNews) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 此处可以添加级联删除逻辑，如删除相关投票和评论
         
-        return res.json(successResponse(null, '新闻删除成功'));
+        return res.json(successResponse(null, 'News deleted successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：手动设置新闻状态
+ * Admin: Manually set news status
  */
 router.put('/:newsId/status', authenticate, isAdmin, [
-    body('status').isIn(Object.values(NEWS_STATUS)).withMessage('无效的新闻状态')
+    body('status').isIn(Object.values(NEWS_STATUS)).withMessage('Invalid news status')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { newsId } = req.params;
@@ -247,24 +247,24 @@ router.put('/:newsId/status', authenticate, isAdmin, [
         ).populate('authorId', 'firstName lastName email');
         
         if (!updatedNews) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 格式化响应数据
         const formattedNews = {
             ...updatedNews.toObject(),
-            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : '未知用户',
+            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : 'Unknown User',
             authorId: updatedNews.authorId?._id || updatedNews.authorId
         };
         
-        return res.json(successResponse(formattedNews, `新闻状态已更新为${status}`));
+        return res.json(successResponse(formattedNews, `News status updated to ${status}`));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：重新计算新闻投票并更新状态
+ * Admin: Recalculate news votes and update status
  */
 router.post('/:newsId/recalculate-votes', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -286,14 +286,14 @@ router.post('/:newsId/recalculate-votes', authenticate, isAdmin, async (req, res
             voteStats: result.voteStats,
             newStatus: result.newStatus,
             news: updatedNews
-        }, '投票重新计算完成'));
+        }, 'Vote recalculation completed'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 获取当前用户的新闻列表
+ * Get current user's news list
  */
 router.get('/my-news', authenticate, async (req, res, next) => {
     try {
@@ -326,7 +326,7 @@ router.get('/my-news', authenticate, async (req, res, next) => {
             result.page,
             result.pageSize,
             result.pageCount,
-            '获取我的新闻列表成功'
+            'My news list retrieved successfully'
         ));
     } catch (error) {
         next(error);

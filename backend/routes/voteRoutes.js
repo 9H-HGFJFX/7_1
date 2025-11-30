@@ -8,17 +8,17 @@ const { successResponse, errorResponse } = require('../middlewares/errorHandler'
 const router = express.Router();
 
 /**
- * 提交投票
+ * Submit vote
  */
 router.post('/', authenticate, [
-    body('newsId').notEmpty().withMessage('新闻ID不能为空'),
-    body('voteResult').isIn(Object.values(VOTE_RESULTS)).withMessage('无效的投票结果')
+    body('newsId').notEmpty().withMessage('News ID cannot be empty'),
+    body('voteResult').isIn(Object.values(VOTE_RESULTS)).withMessage('Invalid vote result')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { newsId, voteResult } = req.body;
@@ -27,13 +27,13 @@ router.post('/', authenticate, [
         // 检查新闻是否存在
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 检查用户是否已经投过票
         const existingVote = await Vote.hasUserVoted(userId, newsId);
         if (existingVote) {
-            return res.status(400).json(errorResponse(400, '您已经为此新闻投过票'));
+            return res.status(400).json(errorResponse(400, 'You have already voted for this news'));
         }
         
         // 创建新投票
@@ -64,14 +64,14 @@ router.post('/', authenticate, [
                 fakePercentage: news.getFakeVotePercentage().toFixed(1) + '%'
             },
             newsStatus: news.status
-        }, '投票成功'));
+        }, 'Vote submitted successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 获取用户对特定新闻的投票
+ * Get user's vote for specific news
  */
 router.get('/user/:newsId', authenticate, async (req, res, next) => {
     try {
@@ -85,17 +85,17 @@ router.get('/user/:newsId', authenticate, async (req, res, next) => {
         });
         
         if (!vote) {
-            return res.json(successResponse(null, '用户尚未投票'));
+            return res.json(successResponse(null, 'User has not voted yet'));
         }
         
-        return res.json(successResponse(vote, '获取投票成功'));
+        return res.json(successResponse(vote, 'Vote retrieved successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 获取新闻投票统计
+ * Get news vote statistics
  */
 router.get('/news/:newsId/stats', async (req, res, next) => {
     try {
@@ -104,7 +104,7 @@ router.get('/news/:newsId/stats', async (req, res, next) => {
         // 检查新闻是否存在
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 获取投票统计
@@ -122,19 +122,19 @@ router.get('/news/:newsId/stats', async (req, res, next) => {
                 ? ((voteStats.notFakeCount / voteStats.totalCount) * 100).toFixed(1) + '%'
                 : '0%',
             newsStatus: news.status
-        }, '获取投票统计成功'));
+        }, 'Vote statistics retrieved successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：获取新闻的所有投票记录
+ * Admin: Get all vote records for news
  */
 router.get('/news/:newsId', authenticate, (req, res, next) => {
     // 检查用户是否为管理员
     if (req.user.role !== 'Administrator') {
-        return res.status(403).json(errorResponse(403, '权限不足，需要管理员角色'));
+        return res.status(403).json(errorResponse(403, 'Insufficient permissions, administrator role required'));
     }
     
     const { newsId } = req.params;
@@ -161,19 +161,19 @@ router.get('/news/:newsId', authenticate, (req, res, next) => {
                     pageSize: Number(pageSize),
                     pageCount: Math.ceil(total / pageSize)
                 }
-            }, '获取投票记录成功'));
+            }, 'Vote records retrieved successfully'));
         });
     })
     .catch(error => next(error));
 });
 
 /**
- * 管理员：标记投票为无效
+ * Admin: Mark vote as invalid
  */
 router.put('/:voteId/invalidate', authenticate, (req, res, next) => {
     // 检查用户是否为管理员
     if (req.user.role !== 'Administrator') {
-        return res.status(403).json(errorResponse(403, '权限不足，需要管理员角色'));
+        return res.status(403).json(errorResponse(403, 'Insufficient permissions, administrator role required'));
     }
     
     const { voteId } = req.params;
@@ -182,7 +182,7 @@ router.put('/:voteId/invalidate', authenticate, (req, res, next) => {
     Vote.invalidateVote(voteId)
         .then(invalidatedVote => {
             if (!invalidatedVote) {
-                return res.status(404).json(errorResponse(404, '投票记录不存在'));
+                return res.status(404).json(errorResponse(404, 'Vote record not found'));
             }
             
             // 重新计算新闻投票
@@ -191,14 +191,14 @@ router.put('/:voteId/invalidate', authenticate, (req, res, next) => {
                     return res.json(successResponse({
                         vote: invalidatedVote,
                         recalculation: recalcResult
-                    }, '投票已标记为无效'));
+                    }, 'Vote marked as invalid'));
                 });
         })
         .catch(error => next(error));
 });
 
 /**
- * 获取用户投票历史
+ * Get user vote history
  */
 router.get('/user-history', authenticate, async (req, res, next) => {
     try {
@@ -221,7 +221,7 @@ router.get('/user-history', authenticate, async (req, res, next) => {
         
         return res.json({
             success: true,
-            message: '获取投票历史成功',
+            message: 'Vote history retrieved successfully',
             data: {
                 votes,
                 pagination: {

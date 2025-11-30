@@ -1,23 +1,23 @@
 const mongoose = require('mongoose');
 
-// 评论模型Schema
+// Comment model Schema
 const commentSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, '用户ID不能为空']
+        required: [true, 'User ID cannot be empty']
     },
     newsId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'News',
-        required: [true, '新闻ID不能为空']
+        required: [true, 'News ID cannot be empty']
     },
     content: {
         type: String,
-        required: [true, '评论内容不能为空'],
+        required: [true, 'Comment content cannot be empty'],
         trim: true,
-        minlength: [1, '评论内容至少需要1个字符'],
-        maxlength: [1000, '评论内容不能超过1000个字符']
+        minlength: [1, 'Comment content must be at least 1 character'],
+        maxlength: [1000, 'Comment content cannot exceed 1000 characters']
     },
     images: [{
         type: String,
@@ -46,13 +46,13 @@ const commentSchema = new mongoose.Schema({
     }
 });
 
-// 更新时间中间件
+// Update time middleware
 commentSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-// 删除评论的实例方法
+// Instance method to delete comment
 commentSchema.methods.deleteComment = function(deletedByUserId) {
     this.isDeleted = true;
     this.deletedBy = deletedByUserId;
@@ -60,7 +60,7 @@ commentSchema.methods.deleteComment = function(deletedByUserId) {
     return this.save();
 };
 
-// 静态方法：获取新闻评论列表（支持分页）
+// Static method: Get comments by news ID (supports pagination)
 commentSchema.statics.getCommentsByNewsId = async function(newsId, options = {}) {
     const {
         page = 1,
@@ -98,7 +98,7 @@ commentSchema.statics.getCommentsByNewsId = async function(newsId, options = {})
     const formattedComments = comments.map(comment => {
         return {
             ...comment,
-            userName: comment.userId ? `${comment.userId.firstName} ${comment.userId.lastName}` : '未知用户',
+            userName: comment.userId ? `${comment.userId.firstName} ${comment.userId.lastName}` : 'Unknown User',
             deletedByUserName: comment.deletedBy ? `${comment.deletedBy.firstName} ${comment.deletedBy.lastName}` : null,
             userId: comment.userId?._id || comment.userId,
             deletedBy: comment.deletedBy?._id || comment.deletedBy
@@ -114,7 +114,7 @@ commentSchema.statics.getCommentsByNewsId = async function(newsId, options = {})
     };
 };
 
-// 静态方法：获取用户的评论列表
+// Static method: Get comments by user ID
 commentSchema.statics.getCommentsByUserId = async function(userId, options = {}) {
     const {
         page = 1,
@@ -156,7 +156,7 @@ commentSchema.statics.getCommentsByUserId = async function(userId, options = {})
     };
 };
 
-// 静态方法：删除用户的所有评论
+// Static method: Delete all comments by user
 commentSchema.statics.deleteUserComments = async function(userId) {
     return await this.updateMany(
         { userId, isDeleted: false },
@@ -165,7 +165,7 @@ commentSchema.statics.deleteUserComments = async function(userId) {
     );
 };
 
-// 静态方法：统计新闻有效评论数
+// Static method: Count active comments by news ID
 commentSchema.statics.countActiveCommentsByNewsId = async function(newsId) {
     return await this.countDocuments({
         newsId,
@@ -173,8 +173,8 @@ commentSchema.statics.countActiveCommentsByNewsId = async function(newsId) {
     });
 };
 
-// 创建评论模型
+// Create comment model
 const Comment = mongoose.model('Comment', commentSchema);
 
-// 导出模型
+// Export model
 module.exports = Comment;

@@ -8,7 +8,7 @@ const { successResponse, errorResponse, paginatedResponse } = require('../middle
 const router = express.Router();
 
 /**
- * 获取新闻评论列表
+ * Get news comments list
  */
 router.get('/news/:newsId', async (req, res, next) => {
     try {
@@ -22,7 +22,7 @@ router.get('/news/:newsId', async (req, res, next) => {
         // 检查新闻是否存在
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 获取评论列表
@@ -38,7 +38,7 @@ router.get('/news/:newsId', async (req, res, next) => {
             result.page,
             result.pageSize,
             result.pageCount,
-            '获取评论列表成功'
+            'Comment list retrieved successfully'
         ));
     } catch (error) {
         next(error);
@@ -46,17 +46,17 @@ router.get('/news/:newsId', async (req, res, next) => {
 });
 
 /**
- * 提交评论
+ * Submit comment
  */
 router.post('/', authenticate, [
-    body('newsId').notEmpty().withMessage('新闻ID不能为空'),
-    body('content').notEmpty().withMessage('评论内容不能为空')
+    body('newsId').notEmpty().withMessage('News ID cannot be empty'),
+    body('content').notEmpty().withMessage('Comment content cannot be empty')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { newsId, content, images = [] } = req.body;
@@ -65,7 +65,7 @@ router.post('/', authenticate, [
         // 检查新闻是否存在
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 创建评论
@@ -88,14 +88,14 @@ router.post('/', authenticate, [
             userId: savedComment.userId?._id || savedComment.userId
         };
         
-        return res.status(201).json(successResponse(formattedComment, '评论提交成功'));
+        return res.status(201).json(successResponse(formattedComment, 'Comment submitted successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 删除评论（用户只能删除自己的评论，管理员可以删除所有评论）
+ * Delete comment (user can only delete their own comments, admin can delete all comments)
  */
 router.delete('/:commentId', authenticate, async (req, res, next) => {
     try {
@@ -105,39 +105,39 @@ router.delete('/:commentId', authenticate, async (req, res, next) => {
         const comment = await Comment.findById(commentId);
         
         if (!comment) {
-            return res.status(404).json(errorResponse(404, '评论不存在'));
+            return res.status(404).json(errorResponse(404, 'Comment not found'));
         }
         
         // 检查权限：只有评论作者或管理员可以删除评论
         if (comment.userId.toString() !== req.user._id.toString() && req.user.role !== 'Administrator') {
-            return res.status(403).json(errorResponse(403, '权限不足，您只能删除自己的评论'));
+            return res.status(403).json(errorResponse(403, 'Insufficient permissions, you can only delete your own comments'));
         }
         
         // 检查评论是否已经被删除
         if (comment.isDeleted) {
-            return res.status(400).json(errorResponse(400, '该评论已被删除'));
+            return res.status(400).json(errorResponse(400, 'This comment has already been deleted'));
         }
         
         // 标记评论为已删除
         const deletedComment = await comment.deleteComment(req.user._id);
         
-        return res.json(successResponse(deletedComment, '评论删除成功'));
+        return res.json(successResponse(deletedComment, 'Comment deleted successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 更新评论（用户只能更新自己的评论）
+ * Update comment (user can only update their own comments)
  */
 router.put('/:commentId', authenticate, [
-    body('content').notEmpty().withMessage('评论内容不能为空')
+    body('content').notEmpty().withMessage('Comment content cannot be empty')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { commentId } = req.params;
@@ -147,17 +147,17 @@ router.put('/:commentId', authenticate, [
         const comment = await Comment.findById(commentId);
         
         if (!comment) {
-            return res.status(404).json(errorResponse(404, '评论不存在'));
+            return res.status(404).json(errorResponse(404, 'Comment not found'));
         }
         
         // 检查权限：只有评论作者可以更新评论
         if (comment.userId.toString() !== req.user._id.toString()) {
-            return res.status(403).json(errorResponse(403, '权限不足，您只能更新自己的评论'));
+            return res.status(403).json(errorResponse(403, 'Insufficient permissions, you can only update your own comments'));
         }
         
         // 检查评论是否已经被删除
         if (comment.isDeleted) {
-            return res.status(400).json(errorResponse(400, '已删除的评论不能更新'));
+            return res.status(400).json(errorResponse(400, 'Deleted comments cannot be updated'));
         }
         
         // 更新评论
@@ -177,14 +177,14 @@ router.put('/:commentId', authenticate, [
             userId: updatedComment.userId?._id || updatedComment.userId
         };
         
-        return res.json(successResponse(formattedComment, '评论更新成功'));
+        return res.json(successResponse(formattedComment, 'Comment updated successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 获取评论详情
+ * Get comment details
  */
 router.get('/:commentId', async (req, res, next) => {
     try {
@@ -196,26 +196,26 @@ router.get('/:commentId', async (req, res, next) => {
             .populate('deletedBy', 'firstName lastName');
         
         if (!comment) {
-            return res.status(404).json(errorResponse(404, '评论不存在'));
+            return res.status(404).json(errorResponse(404, 'Comment not found'));
         }
         
         // 格式化响应数据
         const formattedComment = {
             ...comment.toObject(),
-            userName: comment.userId ? `${comment.userId.firstName} ${comment.userId.lastName}` : '未知用户',
+            userName: comment.userId ? `${comment.userId.firstName} ${comment.userId.lastName}` : 'Unknown User',
             deletedByUserName: comment.deletedBy ? `${comment.deletedBy.firstName} ${comment.deletedBy.lastName}` : null,
             userId: comment.userId?._id || comment.userId,
             deletedBy: comment.deletedBy?._id || comment.deletedBy
         };
         
-        return res.json(successResponse(formattedComment, '获取评论详情成功'));
+        return res.json(successResponse(formattedComment, 'Comment details retrieved successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：获取所有评论（带筛选功能）
+ * Admin: Get all comments (with filtering)
  */
 router.get('/', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -267,7 +267,7 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
             Number(page),
             Number(pageSize),
             pageCount,
-            '获取评论列表成功'
+            'Comment list retrieved successfully'
         ));
     } catch (error) {
         next(error);
@@ -275,7 +275,7 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
 });
 
 /**
- * 获取当前用户的评论列表
+ * Get current user's comments list
  */
 router.get('/user/my-comments', authenticate, async (req, res, next) => {
     try {
@@ -298,7 +298,7 @@ router.get('/user/my-comments', authenticate, async (req, res, next) => {
             result.page,
             result.pageSize,
             result.pageCount,
-            '获取我的评论列表成功'
+            'My comments list retrieved successfully'
         ));
     } catch (error) {
         next(error);

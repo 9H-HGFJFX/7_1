@@ -55,7 +55,7 @@ const config = {
         // Minimum votes threshold for automatic news verification
         minVotesForDecision: 10,
         // Fake news determination threshold (percentage)
-        fakeNewsThreshold: 0.6 // 60%以上投票认为是假新闻
+        fakeNewsThreshold: 0.6 // News considered fake if more than 60% vote it as fake
     },
     
     // API path prefix

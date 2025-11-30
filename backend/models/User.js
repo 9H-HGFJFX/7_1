@@ -1,47 +1,47 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-// 用户角色枚举
+// User role enumeration
 const ROLES = {
     READER: 'Reader',
     MEMBER: 'Member',
     ADMINISTRATOR: 'Administrator'
 };
 
-// 用户模型Schema
+// User model Schema
 const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
-        required: [true, '名字不能为空'],
+        required: [true, 'First name cannot be empty'],
         trim: true,
-        minlength: [2, '名字至少需要2个字符'],
-        maxlength: [50, '名字不能超过50个字符']
+        minlength: [2, 'First name must be at least 2 characters'],
+        maxlength: [50, 'First name cannot exceed 50 characters']
     },
     lastName: {
         type: String,
-        required: [true, '姓氏不能为空'],
+        required: [true, 'Last name cannot be empty'],
         trim: true,
-        minlength: [2, '姓氏至少需要2个字符'],
-        maxlength: [50, '姓氏不能超过50个字符']
+        minlength: [2, 'Last name must be at least 2 characters'],
+        maxlength: [50, 'Last name cannot exceed 50 characters']
     },
     email: {
         type: String,
-        required: [true, '邮箱不能为空'],
+        required: [true, 'Email cannot be empty'],
         trim: true,
         lowercase: true,
-        unique: [true, '该邮箱已被注册'],
-        match: [/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/, '请输入有效的邮箱地址']
+        unique: [true, 'This email is already registered'],
+        match: [/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/, 'Please enter a valid email address']
     },
     password: {
         type: String,
-        required: [true, '密码不能为空'],
-        minlength: [6, '密码至少需要6个字符'],
+        required: [true, 'Password cannot be empty'],
+        minlength: [6, 'Password must be at least 6 characters'],
         // 不返回密码到客户端
         select: false
     },
     avatar: {
         type: String,
-        default: null // 默认头像URL，可为null
+        default: null // Default avatar URL, can be null
     },
     role: {
         type: String,
@@ -58,15 +58,15 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-// 密码加密中间件
+// Password encryption middleware
 userSchema.pre('save', async function(next) {
-    // 只有当密码被修改时才重新加密
+    // Only re-encrypt when password is modified
     if (!this.isModified('password')) {
         return next();
     }
     
     try {
-        // 生成盐并加密密码
+        // Generate salt and hash password
         const salt = await bcrypt.genSalt(10);
         this.password = await bcrypt.hash(this.password, salt);
         next();
@@ -75,23 +75,23 @@ userSchema.pre('save', async function(next) {
     }
 });
 
-// 更新时间中间件
+// Update time middleware
 userSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-// 验证密码方法
+// Validate password method
 userSchema.methods.validatePassword = async function(password) {
     return bcrypt.compare(password, this.password);
 };
 
-// 获取完整用户名方法
+// Get full name method
 userSchema.methods.getFullName = function() {
     return `${this.firstName} ${this.lastName}`;
 };
 
-// 检查用户角色方法
+// Check user role method
 userSchema.methods.hasRole = function(role) {
     const roleHierarchy = {
         [ROLES.READER]: 1,
@@ -102,10 +102,10 @@ userSchema.methods.hasRole = function(role) {
     return roleHierarchy[this.role] >= roleHierarchy[role];
 };
 
-// 创建用户模型
+// Create user model
 const User = mongoose.model('User', userSchema);
 
-// 导出模型和常量
+// Export model and constants
 module.exports = {
     User,
     ROLES
