@@ -1,14 +1,14 @@
 import { fetchNews } from '../utils/api.js';
 import { formatDate } from '../utils/helpers.js';
 
-// 新闻列表容器
+// News List Container
 let newsListContainer = null;
 let loadingIndicator = null;
 let errorMessageElement = null;
 let emptyStateElement = null;
 let paginationElement = null;
 
-// 状态管理
+// State Management
 let currentPage = 1;
 let currentPageSize = 10;
 let currentFilter = 'all';
@@ -17,11 +17,11 @@ let totalItems = 0;
 let totalPages = 1;
 
 /**
- * 初始化新闻列表
- * @param {number} page - 当前页码
- * @param {number} pageSize - 每页条数
- * @param {string} searchQuery - 搜索关键词
- * @param {string} filter - 筛选条件
+ * Initialize News List
+ * @param {number} page - Current page number
+ * @param {number} pageSize - Items per page
+ * @param {string} searchQuery - Search keyword
+ * @param {string} filter - Filter condition
  */
 export async function initNewsList(page = 1, pageSize = 10, searchQuery = '', filter = 'all') {
     // 更新状态
@@ -37,9 +37,9 @@ export async function initNewsList(page = 1, pageSize = 10, searchQuery = '', fi
     emptyStateElement = document.getElementById('empty-state');
     paginationElement = document.getElementById('pagination');
     
-    // 验证必要元素
+    // Validate required elements
     if (!newsListContainer || !loadingIndicator) {
-        console.error('新闻列表容器或加载指示器未找到');
+        console.error('News list container or loading indicator not found');
         return;
     }
     
@@ -76,11 +76,11 @@ export async function initNewsList(page = 1, pageSize = 10, searchQuery = '', fi
                 renderEmptyState();
             }
         } else {
-            throw new Error(response.message || '获取新闻列表失败');
+            throw new Error(response.message || 'Failed to fetch news list');
         }
     } catch (error) {
-        console.error('获取新闻列表出错:', error);
-        renderErrorState(error.message || '加载失败，请稍后重试');
+        console.error('Error fetching news list:', error);
+        renderErrorState(error.message || 'Failed to load, please try again later');
         
         // 加载失败时使用模拟数据
         loadMockData();
@@ -91,7 +91,7 @@ export async function initNewsList(page = 1, pageSize = 10, searchQuery = '', fi
 }
 
 /**
- * 加载模拟数据（当API调用失败时使用）
+ * Load mock data (used when API call fails)
  */
 async function loadMockData() {
     // 模拟异步加载
@@ -145,27 +145,27 @@ async function loadMockData() {
 }
 
 /**
- * 获取模拟新闻数据
- * @returns {Array} 模拟新闻数据数组
+ * Get mock news data
+ * @returns {Array} Mock news data array
  */
 function getMockNewsData() {
     return [
         {
             _id: '1',
-            title: '人工智能技术在医疗诊断领域取得重大突破',
-            content: '最新研究表明，人工智能技术在医疗诊断领域取得重大突破，能够以95%以上的准确率识别早期癌症迹象。这一技术有望大幅提高癌症早期诊断率，为患者争取更多治疗时间。研究团队负责人表示，这项技术目前已经在三家医院进行临床试验，效果显著。',
+            title: 'Major Breakthrough in AI Medical Diagnosis Technology',
+            content: 'Recent research shows that AI technology has made significant breakthroughs in medical diagnosis, capable of identifying early cancer signs with over 95% accuracy. This technology is expected to greatly improve early cancer diagnosis rates and buy more treatment time for patients. The head of the research team stated that this technology is currently undergoing clinical trials in three hospitals with remarkable results.',
             status: 'Pending',
-            authorName: '张三',
+            authorName: 'Zhang San',
             createdAt: new Date().toISOString(),
             fakeVoteCount: 8,
             notFakeVoteCount: 15
         },
         {
             _id: '2',
-            title: '全球气候变化最新报告发布',
-            content: '联合国气候变化专门委员会最新报告显示，全球平均气温持续上升，如果不采取紧急措施，到本世纪末气温将升高超过2摄氏度。报告强调了减少碳排放的紧迫性，并提出了一系列应对气候变化的政策建议。多国领导人对此表示关注，承诺加强国际合作。',
+            title: 'New Global Climate Change Report Released',
+            content: 'The latest report from the IPCC shows that global average temperatures continue to rise, and without urgent measures, temperatures will increase by more than 2 degrees Celsius by the end of the century. The report emphasizes the urgency of reducing carbon emissions and proposes a series of policy recommendations to address climate change. Leaders from multiple countries have expressed concern and promised to strengthen international cooperation.',
             status: 'Not Fake',
-            authorName: '李四',
+            authorName: 'Li Si',
             createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
             fakeVoteCount: 12,
             notFakeVoteCount: 45,
@@ -173,30 +173,30 @@ function getMockNewsData() {
         },
         {
             _id: '3',
-            title: '虚假信息示例',
-            content: '这条新闻包含虚假信息，仅用于演示假新闻识别功能。请不要相信此类未经证实的内容。',
+            title: 'Fake Information Example',
+            content: 'This news contains false information and is only used to demonstrate the fake news identification feature. Please do not believe such unconfirmed content.',
             status: 'Fake',
-            authorName: '王五',
+            authorName: 'Wang Wu',
             createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
             fakeVoteCount: 67,
             notFakeVoteCount: 5
         },
         {
             _id: '4',
-            title: '经济发展新动向',
-            content: '经济学家预测，今年下半年经济将呈现稳步回升态势。多项经济指标显示，制造业PMI连续三个月回升，消费市场逐渐恢复活力。专家建议，应继续加大对实体经济的支持力度，推动高质量发展。',
+            title: 'New Trends in Economic Development',
+            content: 'Economists predict that the economy will show a steady recovery in the second half of this year. Multiple economic indicators show that the manufacturing PMI has risen for three consecutive months, and the consumer market is gradually regaining vitality. Experts suggest that we should continue to increase support for the real economy and promote high-quality development.',
             status: 'Pending',
-            authorName: '赵六',
+            authorName: 'Zhao Liu',
             createdAt: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
             fakeVoteCount: 11,
             notFakeVoteCount: 23
         },
         {
             _id: '5',
-            title: '教育改革新政策',
-            content: '教育部发布新政策，将进一步推动素质教育改革，减轻学生课业负担。政策明确提出，学校不得随意增加课程难度，要保证学生有足够的体育锻炼时间。家长和教育工作者对此表示欢迎，认为这有利于学生的全面发展。',
+            title: 'New Education Reform Policy',
+            content: 'The Ministry of Education has released a new policy that will further promote quality education reform and reduce students\' academic burden. The policy clearly states that schools must not arbitrarily increase course difficulty and must ensure that students have sufficient time for physical exercise. Parents and educators have welcomed this policy, believing it benefits students\' comprehensive development.',
             status: 'Not Fake',
-            authorName: '孙七',
+            authorName: 'Sun Qi',
             createdAt: new Date(Date.now() - 96 * 60 * 60 * 1000).toISOString(),
             fakeVoteCount: 8,
             notFakeVoteCount: 67,
@@ -206,8 +206,8 @@ function getMockNewsData() {
 }
 
 /**
- * 渲染新闻列表
- * @param {Array} news - 新闻数据数组
+ * Render news list
+ * @param {Array} news - News data array
  */
 function renderNewsList(news) {
     if (!newsListContainer) return;
@@ -241,11 +241,11 @@ function renderNewsList(news) {
             <p class="news-content">${escapeHtml(excerpt)}</p>
             <div class="news-footer">
                 <div class="news-meta">
-                    <span>提交人: ${escapeHtml(item.authorName || '未知')}</span>
-                    <span>提交时间: ${formatDate(item.createdAt)}</span>
-                    <span>投票: ${item.fakeVoteCount || 0}假 / ${item.notFakeVoteCount || 0}真</span>
+                    <span>Author: ${escapeHtml(item.authorName || 'Unknown')}</span>
+                    <span>Submitted: ${formatDate(item.createdAt)}</span>
+                    <span>Votes: ${item.fakeVoteCount || 0} Fake / ${item.notFakeVoteCount || 0} Real</span>
                 </div>
-                <a href="detail.html?id=${item._id}" class="read-more">阅读详情 →</a>
+                <a href="detail.html?id=${item._id}" class="read-more">Read More →</a>
             </div>
         `;
         
@@ -262,21 +262,21 @@ function renderNewsList(news) {
 }
 
 /**
- * 渲染空状态
+ * Render empty state
  */
 function renderEmptyState() {
     if (!newsListContainer) return;
     
-    // 准备空状态消息
-    let emptyMessage = '暂无相关新闻';
+    // Prepare empty state messages
+    let emptyMessage = 'No news available';
     let subMessage = '';
     
     if (currentSearch) {
-        emptyMessage = `未找到与"${escapeHtml(currentSearch)}"相关的新闻`;
-        subMessage = '尝试其他搜索关键词';
+        emptyMessage = `No news found related to "${escapeHtml(currentSearch)}"`;
+        subMessage = 'Try other search keywords';
     } else if (currentFilter !== 'all') {
-        emptyMessage = currentFilter === 'Fake' ? '暂无标记为假新闻的数据' : '暂无标记为非假新闻的数据';
-        subMessage = '尝试切换筛选条件';
+        emptyMessage = currentFilter === 'Fake' ? 'No fake news data available' : 'No non-fake news data available';
+        subMessage = 'Try changing filter';
     }
     
     newsListContainer.innerHTML = `
@@ -284,7 +284,7 @@ function renderEmptyState() {
             <p class="empty-state-title">${emptyMessage}</p>
             ${subMessage ? `<p class="empty-state-subtitle">${subMessage}</p>` : ''}
             ${(currentSearch || currentFilter !== 'all') ? 
-                `<button id="reset-filters-btn" class="reset-filters-btn">重置筛选条件</button>` : ''
+                `<button id="reset-filters-btn" class="reset-filters-btn">Reset Filters</button>` : ''
             }
         </div>
     `;
@@ -304,8 +304,8 @@ function renderEmptyState() {
 }
 
 /**
- * 渲染错误状态
- * @param {string} errorMessage - 错误信息
+ * Render error state
+ * @param {string} errorMessage - Error message
  */
 function renderErrorState(errorMessage) {
     if (!newsListContainer) return;
@@ -313,7 +313,7 @@ function renderErrorState(errorMessage) {
     newsListContainer.innerHTML = `
         <div class="error-state-container">
             <p class="error-state-message">${escapeHtml(errorMessage)}</p>
-            <button id="retry-btn" class="retry-btn">重试</button>
+            <button id="retry-btn" class="retry-btn">Retry</button>
         </div>
     `;
     
@@ -330,11 +330,11 @@ function renderErrorState(errorMessage) {
 }
 
 /**
- * 更新分页组件
- * @param {number} pageCount - 总页数
- * @param {number} currentPageNum - 当前页码
- * @param {number} pageSize - 每页条数
- * @param {number} total - 总条数
+ * Update pagination component
+ * @param {number} pageCount - Total number of pages
+ * @param {number} currentPageNum - Current page number
+ * @param {number} pageSize - Items per page
+ * @param {number} total - Total number of items
  */
 function updatePagination(pageCount, currentPageNum, pageSize, total) {
     if (!paginationElement) return;
@@ -352,11 +352,11 @@ function updatePagination(pageCount, currentPageNum, pageSize, total) {
     // 构建分页HTML
     let paginationHTML = `
         <div class="pagination-info">
-            共 ${total} 条记录，第 ${currentPageNum} / ${pageCount} 页
+            Total ${total} records, Page ${currentPageNum} / ${pageCount}
         </div>
         <div class="pagination-controls">
             <button class="pagination-btn prev-btn ${currentPageNum === 1 ? 'disabled' : ''}" 
-                    data-page="${currentPageNum - 1}">上一页</button>
+                    data-page="${currentPageNum - 1}">Previous</button>
     `;
     
     // 计算显示的页码范围
@@ -396,14 +396,14 @@ function updatePagination(pageCount, currentPageNum, pageSize, total) {
     // 添加下一页按钮
     paginationHTML += `
             <button class="pagination-btn next-btn ${currentPageNum === pageCount ? 'disabled' : ''}" 
-                    data-page="${currentPageNum + 1}">下一页</button>
+                    data-page="${currentPageNum + 1}">Next</button>
         </div>
     `;
     
     // 设置每页条数选择器
     paginationHTML += `
         <div class="pagination-size">
-            每页显示：
+            Items per page:
             <select id="page-size-select" class="page-size-select">
                 <option value="5" ${pageSize === 5 ? 'selected' : ''}>5</option>
                 <option value="10" ${pageSize === 10 ? 'selected' : ''}>10</option>
@@ -421,7 +421,7 @@ function updatePagination(pageCount, currentPageNum, pageSize, total) {
 }
 
 /**
- * 绑定分页事件
+ * Bind pagination events
  */
 function bindPaginationEvents() {
     // 页码按钮点击事件
@@ -472,7 +472,7 @@ function bindPaginationEvents() {
 }
 
 /**
- * 重置筛选条件
+ * Reset filters
  */
 export function resetFilters() {
     currentFilter = 'all';
@@ -491,8 +491,8 @@ export function resetFilters() {
 }
 
 /**
- * 设置筛选条件并重新加载数据
- * @param {string} filter - 筛选条件
+ * Set filter and reload data
+ * @param {string} filter - Filter condition
  */
 export function setFilter(filter) {
     currentFilter = filter;
@@ -501,8 +501,8 @@ export function setFilter(filter) {
 }
 
 /**
- * 设置搜索关键词并重新加载数据
- * @param {string} searchQuery - 搜索关键词
+ * Set search query and reload data
+ * @param {string} searchQuery - Search keyword
  */
 export function setSearchQuery(searchQuery) {
     currentSearch = searchQuery;
@@ -511,9 +511,9 @@ export function setSearchQuery(searchQuery) {
 }
 
 /**
- * 获取状态样式类
- * @param {string} status - 新闻状态
- * @returns {string} 样式类名
+ * Get status style class
+ * @param {string} status - News status
+ * @returns {string} Style class name
  */
 function getStatusClass(status) {
     switch (status) {
@@ -525,23 +525,23 @@ function getStatusClass(status) {
 }
 
 /**
- * 获取状态显示文本
- * @param {string} status - 新闻状态
- * @returns {string} 显示文本
+ * Get status display text
+ * @param {string} status - News status
+ * @returns {string} Display text
  */
 function getStatusText(status) {
     switch (status) {
-        case 'Fake': return '假新闻';
-        case 'Not Fake': return '非假新闻';
-        case 'Pending': return '待验证';
+        case 'Fake': return 'Fake';
+        case 'Not Fake': return 'Not Fake';
+        case 'Pending': return 'Pending';
         default: return status;
     }
 }
 
 /**
- * HTML转义，防止XSS攻击
- * @param {string} text - 原始文本
- * @returns {string} 转义后的文本
+ * HTML escape to prevent XSS attacks
+ * @param {string} text - Original text
+ * @returns {string} Escaped text
  */
 function escapeHtml(text) {
     const div = document.createElement('div');
@@ -550,7 +550,7 @@ function escapeHtml(text) {
 }
 
 /**
- * 显示加载状态
+ * Show loading state
  */
 function showLoading() {
     if (loadingIndicator) {
@@ -559,7 +559,7 @@ function showLoading() {
 }
 
 /**
- * 隐藏加载状态
+ * Hide loading state
  */
 function hideLoading() {
     if (loadingIndicator) {
@@ -568,7 +568,7 @@ function hideLoading() {
 }
 
 /**
- * 显示错误信息
+ * Show error message
  */
 function showError() {
     if (errorMessageElement) {
@@ -577,7 +577,7 @@ function showError() {
 }
 
 /**
- * 隐藏错误信息
+ * Hide error message
  */
 function hideError() {
     if (errorMessageElement) {
@@ -586,7 +586,7 @@ function hideError() {
 }
 
 /**
- * 显示空状态
+ * Show empty state
  */
 function showEmptyState() {
     if (emptyStateElement) {
@@ -595,7 +595,7 @@ function showEmptyState() {
 }
 
 /**
- * 隐藏空状态
+ * Hide empty state
  */
 function hideEmptyState() {
     if (emptyStateElement) {
@@ -604,7 +604,7 @@ function hideEmptyState() {
 }
 
 /**
- * 显示模拟数据提示
+ * Show mock data notice
  */
 function showMockDataNotice() {
     let noticeElement = document.getElementById('mock-data-notice');
@@ -613,7 +613,7 @@ function showMockDataNotice() {
         noticeElement = document.createElement('div');
         noticeElement.id = 'mock-data-notice';
         noticeElement.className = 'mock-data-notice';
-        noticeElement.textContent = '当前显示的是模拟数据，用于演示功能';
+        noticeElement.textContent = 'Currently displaying mock data for demonstration purposes';
         
         // 添加到页面中
         if (newsListContainer && newsListContainer.parentNode) {
