@@ -42,7 +42,7 @@ const verifyToken = (token) => {
  */
 const authenticate = async (req, res, next) => {
     try {
-        // 从请求头获取令牌
+        // Get token from request header
         const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
@@ -52,10 +52,10 @@ const authenticate = async (req, res, next) => {
             });
         }
         
-        // 验证令牌
+        // Validate token
         const decoded = await verifyToken(token);
         
-        // 获取用户信息
+        // Get user information
         const user = await User.findById(decoded.id);
         
         if (!user) {
@@ -65,7 +65,7 @@ const authenticate = async (req, res, next) => {
             });
         }
         
-        // 将用户信息附加到请求对象
+        // Attach user information to request object
         req.user = user;
         req.userToken = decoded;
         
@@ -92,7 +92,7 @@ const authenticate = async (req, res, next) => {
 const authorize = (requiredRole) => {
     return (req, res, next) => {
         try {
-            // 确保用户已通过认证
+            // Ensure user is authenticated
             if (!req.user) {
                 return res.status(401).json({
                     success: false,
@@ -100,7 +100,7 @@ const authorize = (requiredRole) => {
                 });
             }
             
-            // 检查用户角色是否满足要求
+            // Check if user role meets requirements
             const userRole = req.user.role;
             const roleHierarchy = {
                 [ROLES.READER]: 1,
@@ -130,29 +130,29 @@ const authorize = (requiredRole) => {
  */
 const optionalAuthenticate = async (req, res, next) => {
     try {
-        // 从请求头获取令牌
+        // Get token from request header
         const token = req.header('Authorization')?.replace('Bearer ', '');
         
         if (!token) {
-            // 没有提供令牌，继续执行但不设置用户信息
+            // No token provided, continue execution without setting user info
             return next();
         }
         
-        // 验证令牌
+        // Validate token
         const decoded = await verifyToken(token);
         
-        // 获取用户信息
+        // Get user information
         const user = await User.findById(decoded.id);
         
         if (user) {
-            // 将用户信息附加到请求对象
+            // Attach user information to request object
             req.user = user;
             req.userToken = decoded;
         }
         
         next();
     } catch (error) {
-        // 令牌无效，但不阻止请求继续
+        // Token is invalid, but do not prevent request from continuing
         next();
     }
 };
@@ -185,7 +185,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
                 });
             }
             
-            // 查找资源
+            // Find resource
             const resource = await model.findById(resourceId);
             
             if (!resource) {
@@ -195,7 +195,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
                 });
             }
             
-            // 检查用户是否为资源所有者或管理员
+            // Check if user is resource owner or administrator
             if (resource.authorId && resource.authorId.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMINISTRATOR) {
                 return res.status(403).json({
                     success: false,
@@ -203,7 +203,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
                 });
             }
             
-            // 将资源附加到请求对象
+            // Attach resource to request object
             req[resourceType.toLowerCase()] = resource;
             
             next();

@@ -4,20 +4,20 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/config');
 
 /**
- * 用户服务类
+ * User Service Class
  */
 class UserService {
     /**
-     * 创建新用户
-     * @param {Object} userData - 用户数据
-     * @returns {Promise<Object>} 创建的用户对象
+     * Create new user
+     * @param {Object} userData - User data
+     * @returns {Promise<Object>} Created user object
      */
     static async createUser(userData) {
         try {
             // 检查邮箱是否已存在
             const existingUser = await User.findOne({ email: userData.email });
             if (existingUser) {
-                throw new Error('邮箱已被注册');
+                throw new Error('Email already registered');
             }
             
             // 创建用户实例
@@ -26,7 +26,7 @@ class UserService {
                 lastName: userData.lastName,
                 email: userData.email,
                 password: userData.password, // 会在保存时自动加密
-                role: ROLES.READER, // 默认角色为读者
+                role: ROLES.READER, // Default role is reader
                 avatar: userData.avatar || null
             });
             
@@ -39,22 +39,22 @@ class UserService {
             
             return userObj;
         } catch (error) {
-            throw new Error(`创建用户失败: ${error.message}`);
+            throw new Error(`Failed to create user: ${error.message}`);
         }
     }
     
     /**
-     * 用户登录
-     * @param {string} email - 用户邮箱
-     * @param {string} password - 用户密码
-     * @returns {Promise<Object>} 包含token和用户信息的对象
+     * User login
+     * @param {string} email - User email
+     * @param {string} password - User password
+     * @returns {Promise<Object>} Object containing token and user info
      */
     static async login(email, password) {
         try {
             // 查找用户
             const user = await User.findOne({ email });
             if (!user) {
-                throw new Error('邮箱或密码错误');
+                throw new Error('Invalid email or password');
             }
             
             // 验证密码
@@ -85,20 +85,20 @@ class UserService {
                 user: userObj
             };
         } catch (error) {
-            throw new Error(`登录失败: ${error.message}`);
+            throw new Error(`Login failed: ${error.message}`);
         }
     }
     
     /**
-     * 获取用户信息
-     * @param {string} userId - 用户ID
-     * @returns {Promise<Object>} 用户信息
+     * Get user info
+     * @param {string} userId - User ID
+     * @returns {Promise<Object>} User information
      */
     static async getUserById(userId) {
         try {
             const user = await User.findById(userId);
             if (!user) {
-                throw new Error('用户不存在');
+                throw new Error('User not found');
             }
             
             // 不返回密码
@@ -107,15 +107,15 @@ class UserService {
             
             return userObj;
         } catch (error) {
-            throw new Error(`获取用户信息失败: ${error.message}`);
+            throw new Error(`Failed to get user info: ${error.message}`);
         }
     }
     
     /**
-     * 更新用户信息
-     * @param {string} userId - 用户ID
-     * @param {Object} updateData - 更新数据
-     * @returns {Promise<Object>} 更新后的用户信息
+     * Update user info
+     * @param {string} userId - User ID
+     * @param {Object} updateData - Update data
+     * @returns {Promise<Object>} Updated user info
      */
     static async updateUser(userId, updateData) {
         try {
@@ -130,7 +130,7 @@ class UserService {
             );
             
             if (!user) {
-                throw new Error('用户不存在');
+                throw new Error('User not found');
             }
             
             // 不返回密码
@@ -139,52 +139,52 @@ class UserService {
             
             return userObj;
         } catch (error) {
-            throw new Error(`更新用户信息失败: ${error.message}`);
+            throw new Error(`Failed to update user info: ${error.message}`);
         }
     }
     
     /**
-     * 更新用户密码
-     * @param {string} userId - 用户ID
-     * @param {string} oldPassword - 旧密码
-     * @param {string} newPassword - 新密码
-     * @returns {Promise<Object>} 更新结果
+     * Update user password
+     * @param {string} userId - User ID
+     * @param {string} oldPassword - Old password
+     * @param {string} newPassword - New password
+     * @returns {Promise<Object>} Update result
      */
     static async updatePassword(userId, oldPassword, newPassword) {
         try {
             const user = await User.findById(userId);
             if (!user) {
-                throw new Error('用户不存在');
+                throw new Error('User not found');
             }
             
             // 验证旧密码
             const isMatch = await bcrypt.compare(oldPassword, user.password);
             if (!isMatch) {
-                throw new Error('旧密码错误');
+                throw new Error('Incorrect old password');
             }
             
             // 更新密码
             user.password = newPassword; // 会在保存时自动加密
             await user.save();
             
-            return { success: true, message: '密码更新成功' };
+            return { success: true, message: 'Password updated successfully' };
         } catch (error) {
-            throw new Error(`更新密码失败: ${error.message}`);
+            throw new Error(`Failed to update password: ${error.message}`);
         }
     }
     
     /**
-     * 更新用户角色（管理员权限）
-     * @param {string} userId - 用户ID
-     * @param {string} newRole - 新角色
-     * @returns {Promise<Object>} 更新后的用户信息
+     * Update user role (admin permission)
+     * @param {string} userId - User ID
+     * @param {string} newRole - New role
+     * @returns {Promise<Object>} Updated user info
      */
     static async updateUserRole(userId, newRole) {
         try {
             // 验证角色是否有效
             const validRoles = Object.values(ROLES);
             if (!validRoles.includes(newRole)) {
-                throw new Error('无效的角色');
+                throw new Error('Invalid role');
             }
             
             // 更新用户角色
@@ -195,7 +195,7 @@ class UserService {
             );
             
             if (!user) {
-                throw new Error('用户不存在');
+                throw new Error('User not found');
             }
             
             // 不返回密码
@@ -204,14 +204,14 @@ class UserService {
             
             return userObj;
         } catch (error) {
-            throw new Error(`更新用户角色失败: ${error.message}`);
+            throw new Error(`Failed to update user role: ${error.message}`);
         }
     }
     
     /**
-     * 获取用户列表（管理员权限）
-     * @param {Object} query - 查询参数
-     * @returns {Promise<Array>} 用户列表
+     * Get users list (admin permission)
+     * @param {Object} query - Query parameters
+     * @returns {Promise<Array>} Users list
      */
     static async getUsers(query = {}) {
         try {
@@ -258,40 +258,40 @@ class UserService {
                 }
             };
         } catch (error) {
-            throw new Error(`获取用户列表失败: ${error.message}`);
+            throw new Error(`Failed to get users list: ${error.message}`);
         }
     }
     
     /**
-     * 删除用户（管理员权限）
-     * @param {string} userId - 用户ID
-     * @returns {Promise<Object>} 删除结果
+     * Delete user (admin permission)
+     * @param {string} userId - User ID
+     * @returns {Promise<Object>} Delete result
      */
     static async deleteUser(userId) {
         try {
             // 不允许删除管理员用户
             const user = await User.findById(userId);
             if (!user) {
-                throw new Error('用户不存在');
+                throw new Error('User not found');
             }
             
             if (user.role === ROLES.ADMINISTRATOR) {
-                throw new Error('不能删除管理员用户');
+                throw new Error('Cannot delete administrator user');
             }
             
             await User.findByIdAndDelete(userId);
             
-            return { success: true, message: '用户删除成功' };
+            return { success: true, message: 'User deleted successfully' };
         } catch (error) {
-            throw new Error(`删除用户失败: ${error.message}`);
+            throw new Error(`Failed to delete user: ${error.message}`);
         }
     }
     
     /**
-     * 验证用户权限
-     * @param {string} userId - 用户ID
-     * @param {string} requiredRole - 所需角色
-     * @returns {Promise<boolean>} 权限验证结果
+     * Check user permission
+     * @param {string} userId - User ID
+     * @param {string} requiredRole - Required role
+     * @returns {Promise<boolean>} Permission check result
      */
     static async checkUserPermission(userId, requiredRole) {
         try {
@@ -300,7 +300,7 @@ class UserService {
                 return false;
             }
             
-            // 角色权限层级：ADMINISTRATOR > MEMBER > READER
+            // Role permission hierarchy: ADMINISTRATOR > MEMBER > READER
             const roleHierarchy = {
                 [ROLES.READER]: 1,
                 [ROLES.MEMBER]: 2,
@@ -309,7 +309,7 @@ class UserService {
             
             return roleHierarchy[user.role] >= roleHierarchy[requiredRole];
         } catch (error) {
-            console.error('权限验证失败:', error);
+            console.error('Permission check failed:', error);
             return false;
         }
     }

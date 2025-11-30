@@ -3,14 +3,14 @@ const { Vote } = require('../models/Vote');
 const { Comment } = require('../models/Comment');
 
 /**
- * 新闻服务类
+ * News Service Class
  */
 class NewsService {
     /**
-     * 创建新闻
-     * @param {Object} newsData - 新闻数据
-     * @param {string} userId - 用户ID
-     * @returns {Promise<Object>} 创建的新闻对象
+     * Create news
+     * @param {Object} newsData - News data
+     * @param {string} userId - User ID
+     * @returns {Promise<Object>} Created news object
      */
     static async createNews(newsData, userId) {
         try {
@@ -18,7 +18,7 @@ class NewsService {
             const news = new News({
                 title: newsData.title,
                 content: newsData.content,
-                status: NEWS_STATUS.PENDING, // 初始状态为待审核
+                status: NEWS_STATUS.PENDING, // Initial status is pending for review
                 author: userId,
                 imageUrl: newsData.imageUrl || null
             });
@@ -31,14 +31,14 @@ class NewsService {
             
             return news;
         } catch (error) {
-            throw new Error(`创建新闻失败: ${error.message}`);
+            throw new Error(`Failed to create news: ${error.message}`);
         }
     }
     
     /**
-     * 获取新闻列表
-     * @param {Object} query - 查询参数
-     * @returns {Promise<Object>} 新闻列表和分页信息
+     * Get news list
+     * @param {Object} query - Query parameters
+     * @returns {Promise<Object>} News list and pagination info
      */
     static async getNewsList(query = {}) {
         try {
@@ -112,14 +112,14 @@ class NewsService {
                 }
             };
         } catch (error) {
-            throw new Error(`获取新闻列表失败: ${error.message}`);
+            throw new Error(`Failed to get news list: ${error.message}`);
         }
     }
     
     /**
-     * 获取新闻详情
-     * @param {string} newsId - 新闻ID
-     * @returns {Promise<Object>} 新闻详情
+     * Get news details
+     * @param {string} newsId - News ID
+     * @returns {Promise<Object>} News details
      */
     static async getNewsDetail(newsId) {
         try {
@@ -128,7 +128,7 @@ class NewsService {
                 .populate('author', 'firstName lastName email role');
             
             if (!news) {
-                throw new Error('新闻不存在');
+                throw new Error('News not found');
             }
             
             // 转换为普通对象
@@ -147,28 +147,28 @@ class NewsService {
             
             return newsObj;
         } catch (error) {
-            throw new Error(`获取新闻详情失败: ${error.message}`);
+            throw new Error(`Failed to get news details: ${error.message}`);
         }
     }
     
     /**
-     * 更新新闻
-     * @param {string} newsId - 新闻ID
-     * @param {Object} updateData - 更新数据
-     * @param {string} userId - 用户ID
-     * @returns {Promise<Object>} 更新后的新闻
+     * Update news
+     * @param {string} newsId - News ID
+     * @param {Object} updateData - Update data
+     * @param {string} userId - User ID
+     * @returns {Promise<Object>} Updated news
      */
     static async updateNews(newsId, updateData, userId) {
         try {
             // 查找新闻
             const news = await News.findById(newsId);
             if (!news) {
-                throw new Error('新闻不存在');
+                throw new Error('News not found');
             }
             
             // 检查是否为新闻作者
             if (news.author.toString() !== userId) {
-                throw new Error('无权限修改此新闻');
+                throw new Error('No permission to modify this news');
             }
             
             // 更新字段
@@ -187,28 +187,28 @@ class NewsService {
             
             return news;
         } catch (error) {
-            throw new Error(`更新新闻失败: ${error.message}`);
+            throw new Error(`Failed to update news: ${error.message}`);
         }
     }
     
     /**
-     * 删除新闻
-     * @param {string} newsId - 新闻ID
-     * @param {string} userId - 用户ID
-     * @param {boolean} isAdmin - 是否为管理员操作
-     * @returns {Promise<Object>} 删除结果
+     * Delete news
+     * @param {string} newsId - News ID
+     * @param {string} userId - User ID
+     * @param {boolean} isAdmin - Whether it's admin operation
+     * @returns {Promise<Object>} Delete result
      */
     static async deleteNews(newsId, userId, isAdmin = false) {
         try {
             // 查找新闻
             const news = await News.findById(newsId);
             if (!news) {
-                throw new Error('新闻不存在');
+                throw new Error('News not found');
             }
             
             // 检查权限
             if (!isAdmin && news.author.toString() !== userId) {
-                throw new Error('无权限删除此新闻');
+                throw new Error('No permission to delete this news');
             }
             
             // 删除新闻相关的投票和评论
@@ -218,24 +218,24 @@ class NewsService {
             // 删除新闻
             await News.findByIdAndDelete(newsId);
             
-            return { success: true, message: '新闻删除成功' };
+            return { success: true, message: 'News deleted successfully' };
         } catch (error) {
-            throw new Error(`删除新闻失败: ${error.message}`);
+            throw new Error(`Failed to delete news: ${error.message}`);
         }
     }
     
     /**
-     * 更新新闻状态（管理员操作）
-     * @param {string} newsId - 新闻ID
-     * @param {string} status - 新状态
-     * @returns {Promise<Object>} 更新后的新闻
+     * Update news status (admin operation)
+     * @param {string} newsId - News ID
+     * @param {string} status - New status
+     * @returns {Promise<Object>} Updated news
      */
     static async updateNewsStatus(newsId, status) {
         try {
             // 验证状态是否有效
             const validStatuses = Object.values(NEWS_STATUS);
             if (!validStatuses.includes(status)) {
-                throw new Error('无效的新闻状态');
+                throw new Error('Invalid news status');
             }
             
             // 更新状态
@@ -246,26 +246,26 @@ class NewsService {
             ).populate('author', 'firstName lastName email role');
             
             if (!news) {
-                throw new Error('新闻不存在');
+                throw new Error('News not found');
             }
             
             return news;
         } catch (error) {
-            throw new Error(`更新新闻状态失败: ${error.message}`);
+            throw new Error(`Failed to update news status: ${error.message}`);
         }
     }
     
     /**
-     * 重新计算新闻投票状态
-     * @param {string} newsId - 新闻ID
-     * @returns {Promise<Object>} 更新后的新闻状态和投票统计
+     * Recalculate news vote status
+     * @param {string} newsId - News ID
+     * @returns {Promise<Object>} Updated news status and vote statistics
      */
     static async recalculateNewsStatus(newsId) {
         try {
             // 查找新闻
             const news = await News.findById(newsId);
             if (!news) {
-                throw new Error('新闻不存在');
+                throw new Error('News not found');
             }
             
             // 获取投票统计
@@ -298,15 +298,15 @@ class NewsService {
                 voteStats
             };
         } catch (error) {
-            throw new Error(`重新计算新闻状态失败: ${error.message}`);
+            throw new Error(`Failed to recalculate news status: ${error.message}`);
         }
     }
     
     /**
-     * 获取用户的新闻列表
-     * @param {string} userId - 用户ID
-     * @param {Object} query - 查询参数
-     * @returns {Promise<Object>} 新闻列表和分页信息
+     * Get user's news list
+     * @param {string} userId - User ID
+     * @param {Object} query - Query parameters
+     * @returns {Promise<Object>} News list and pagination info
      */
     static async getUserNews(userId, query = {}) {
         try {
@@ -350,7 +350,7 @@ class NewsService {
                 }
             };
         } catch (error) {
-            throw new Error(`获取用户新闻列表失败: ${error.message}`);
+            throw new Error(`Failed to get user news list: ${error.message}`);
         }
     }
 }

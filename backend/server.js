@@ -5,7 +5,7 @@ require('dotenv').config();
 console.log(`🚀 Starting application - Environment: ${process.env.NODE_ENV || 'development'}`);
 console.log(`📝 Environment variable check starting...`);
 
-// 检查关键环境变量
+// Check critical environment variables
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => 
   process.env.NODE_ENV === 'production' && !process.env[varName]
@@ -25,13 +25,13 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// 导入路由
+// Import routes
 const userRoutes = require('./routes/userRoutes');
 const newsRoutes = require('./routes/newsRoutes');
 const voteRoutes = require('./routes/voteRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 
-// 导入中间件
+// Import middleware
 const { notFoundHandler, globalErrorHandler, logger } = require('./middlewares/errorHandler');
 const authMiddleware = require('./middlewares/auth');
 
@@ -50,7 +50,7 @@ app.use(cors({
   origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
-  maxAge: 86400 // 预检请求缓存时间
+  maxAge: 86400 // Preflight request cache time
 }));
 
 // Add request logging middleware
@@ -235,7 +235,7 @@ async function startServer() {
     } catch (dbError) {
       clearTimeout(dbConnectTimeout);
       console.error('⚠️  Database connection failed, but server will continue running:', dbError.message);
-      // 在无服务器环境中，我们记录错误但不阻止服务器启动
+      // In serverless environment, we log errors but don't prevent server startup
     }
     
     // Attempt to initialize database (if connected)
@@ -278,7 +278,7 @@ async function startServer() {
   } catch (error) {
     console.error('❌ Error during server startup:', error);
     console.error(error.stack);
-    // 在本地开发环境中，如果启动失败，我们仍然尝试启动服务器以提供健康检查端点
+    // In local development environment, if startup fails, we still try to start the server to provide health check endpoints
     try {
       app.listen(PORT, () => {
         console.log(`⚠️  Server started in degraded mode at http://localhost:${PORT}`);

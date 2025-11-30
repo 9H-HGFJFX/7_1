@@ -3,28 +3,28 @@ const { News, NEWS_STATUS } = require('../models/News');
 const NewsService = require('./newsService');
 
 /**
- * 投票服务类
+ * Vote Service Class
  */
 class VoteService {
     /**
-     * 提交投票
-     * @param {string} userId - 用户ID
-     * @param {string} newsId - 新闻ID
-     * @param {string} result - 投票结果（FAKE或NOT_FAKE）
-     * @returns {Promise<Object>} 投票结果
+     * Submit vote
+     * @param {string} userId - User ID
+     * @param {string} newsId - News ID
+     * @param {string} result - Vote result (FAKE or NOT_FAKE)
+     * @returns {Promise<Object>} Vote result
      */
     static async submitVote(userId, newsId, result) {
         try {
             // 验证新闻是否存在
             const news = await News.findById(newsId);
             if (!news) {
-                throw new Error('新闻不存在');
+                throw new Error('News does not exist');
             }
             
             // 验证投票结果是否有效
             const validResults = Object.values(VOTE_RESULT);
             if (!validResults.includes(result)) {
-                throw new Error('无效的投票结果');
+                throw new Error('Invalid vote result');
             }
             
             // 检查用户是否已经对该新闻投过票
@@ -34,7 +34,7 @@ class VoteService {
             });
             
             if (existingVote) {
-                throw new Error('您已经对该新闻投过票了');
+                throw new Error('You have already voted on this news');
             }
             
             // 创建新投票
@@ -52,7 +52,7 @@ class VoteService {
             
             return {
                 success: true,
-                message: '投票成功',
+                message: 'Vote successful',
                 vote: {
                     id: vote._id,
                     result: vote.result,
@@ -62,15 +62,15 @@ class VoteService {
                 voteStats: statusUpdate.voteStats
             };
         } catch (error) {
-            throw new Error(`投票失败: ${error.message}`);
+            throw new Error(`Vote failed: ${error.message}`);
         }
     }
     
     /**
-     * 获取用户对特定新闻的投票
-     * @param {string} userId - 用户ID
-     * @param {string} newsId - 新闻ID
-     * @returns {Promise<Object|null>} 用户投票信息或null
+     * Get user's vote for specific news
+     * @param {string} userId - User ID
+     * @param {string} newsId - News ID
+     * @returns {Promise<Object|null>} User vote information or null
      */
     static async getUserVoteForNews(userId, newsId) {
         try {
@@ -81,14 +81,14 @@ class VoteService {
             
             return vote ? vote.toObject() : null;
         } catch (error) {
-            throw new Error(`获取用户投票信息失败: ${error.message}`);
+            throw new Error(`Failed to get user vote information: ${error.message}`);
         }
     }
     
     /**
-     * 获取新闻的投票统计
-     * @param {string} newsId - 新闻ID
-     * @returns {Promise<Object>} 投票统计
+     * Get vote statistics for news
+     * @param {string} newsId - News ID
+     * @returns {Promise<Object>} Vote statistics
      */
     static async getNewsVoteStats(newsId) {
         try {
@@ -96,15 +96,15 @@ class VoteService {
             const stats = await Vote.getNewsVoteStats(newsId);
             return stats;
         } catch (error) {
-            throw new Error(`获取投票统计失败: ${error.message}`);
+            throw new Error(`Failed to get vote statistics: ${error.message}`);
         }
     }
     
     /**
-     * 获取新闻的所有投票记录（管理员权限）
-     * @param {string} newsId - 新闻ID
-     * @param {Object} query - 查询参数
-     * @returns {Promise<Object>} 投票记录列表和分页信息
+     * Get all vote records for news (Admin permission)
+     * @param {string} newsId - News ID
+     * @param {Object} query - Query parameters
+     * @returns {Promise<Object>} Vote records list and pagination info
      */
     static async getNewsVotes(newsId, query = {}) {
         try {
@@ -138,22 +138,22 @@ class VoteService {
                 }
             };
         } catch (error) {
-            throw new Error(`获取新闻投票记录失败: ${error.message}`);
+            throw new Error(`Failed to get news vote records: ${error.message}`);
         }
     }
     
     /**
-     * 标记投票为无效（管理员权限）
-     * @param {string} voteId - 投票ID
-     * @param {boolean} isInvalid - 是否无效
-     * @returns {Promise<Object>} 更新后的投票信息和重新计算的新闻状态
+     * Mark vote as invalid (Admin permission)
+     * @param {string} voteId - Vote ID
+     * @param {boolean} isInvalid - Whether invalid
+     * @returns {Promise<Object>} Updated vote info and recalculated news status
      */
     static async markVoteInvalid(voteId, isInvalid = true) {
         try {
             // 查找投票
             const vote = await Vote.findById(voteId);
             if (!vote) {
-                throw new Error('投票不存在');
+                throw new Error('Vote does not exist');
             }
             
             // 更新投票状态
@@ -165,7 +165,7 @@ class VoteService {
             
             return {
                 success: true,
-                message: isInvalid ? '投票已标记为无效' : '投票已恢复有效',
+                message: isInvalid ? 'Vote has been marked as invalid' : 'Vote has been restored as valid',
                 vote: {
                     id: vote._id,
                     isInvalid: vote.isInvalid
@@ -174,15 +174,15 @@ class VoteService {
                 voteStats: statusUpdate.voteStats
             };
         } catch (error) {
-            throw new Error(`更新投票状态失败: ${error.message}`);
+            throw new Error(`Failed to update vote status: ${error.message}`);
         }
     }
     
     /**
-     * 获取用户的投票历史
-     * @param {string} userId - 用户ID
-     * @param {Object} query - 查询参数
-     * @returns {Promise<Object>} 投票历史列表和分页信息
+     * Get user's vote history
+     * @param {string} userId - User ID
+     * @param {Object} query - Query parameters
+     * @returns {Promise<Object>} Vote history list and pagination info
      */
     static async getUserVoteHistory(userId, query = {}) {
         try {
@@ -216,15 +216,15 @@ class VoteService {
                 }
             };
         } catch (error) {
-            throw new Error(`获取用户投票历史失败: ${error.message}`);
+            throw new Error(`Failed to get user vote history: ${error.message}`);
         }
     }
     
     /**
-     * 批量标记投票为无效（管理员权限）
-     * @param {Array<string>} voteIds - 投票ID数组
-     * @param {boolean} isInvalid - 是否无效
-     * @returns {Promise<Object>} 批量操作结果
+     * Batch mark votes as invalid (Admin permission)
+     * @param {Array<string>} voteIds - Array of vote IDs
+     * @param {boolean} isInvalid - Whether invalid
+     * @returns {Promise<Object>} Batch operation result
      */
     static async batchMarkVotesInvalid(voteIds, isInvalid = true) {
         try {
@@ -232,7 +232,7 @@ class VoteService {
             const votes = await Vote.find({ _id: { $in: voteIds } });
             
             if (votes.length === 0) {
-                throw new Error('未找到要更新的投票');
+                throw new Error('No votes found to update');
             }
             
             // 收集涉及的新闻ID
@@ -251,19 +251,19 @@ class VoteService {
             
             return {
                 success: true,
-                message: `成功更新了 ${votes.length} 条投票记录`,
+                message: `Successfully updated ${votes.length} vote records`,","},{
                 updatedCount: votes.length,
                 statusUpdates
             };
         } catch (error) {
-            throw new Error(`批量更新投票状态失败: ${error.message}`);
+            throw new Error(`Failed to batch update vote status: ${error.message}`);
         }
     }
     
     /**
-     * 获取投票统计汇总（管理员权限）
-     * @param {Object} query - 查询参数
-     * @returns {Promise<Object>} 投票统计汇总
+     * Get vote summary statistics (Admin permission)
+     * @param {Object} query - Query parameters
+     * @returns {Promise<Object>} Vote summary statistics
      */
     static async getVoteSummary(query = {}) {
         try {
@@ -306,7 +306,7 @@ class VoteService {
                 notFakeVotes: 0
             };
         } catch (error) {
-            throw new Error(`获取投票统计汇总失败: ${error.message}`);
+            throw new Error(`Failed to get vote summary statistics: ${error.message}`);
         }
     }
 }
