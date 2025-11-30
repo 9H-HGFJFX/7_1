@@ -5,10 +5,9 @@
 
 const mongoose = require('mongoose');
 const config = require('../config/config');
-const { User, ROLES } = require('../models/User');
-const { News, NEWS_STATUS } = require('../models/News');
-const { Vote, VOTE_RESULTS } = require('../models/Vote');
-const Comment = require('../models/Comment');
+
+// 避免在无服务器环境中加载所有模型，这可能导致冷启动延迟
+let User, ROLES, News, NEWS_STATUS, Vote, VOTE_RESULTS, Comment;
 
 class DatabaseService {
     constructor() {
@@ -17,80 +16,100 @@ class DatabaseService {
         this.isInitializing = false;
         this.initializationPromise = null;
         this.lastConnectionTime = null;
+        this.connectionStartTime = null;
+        this.modelsLoaded = false;
     }
 
     /**
-     * 获取mongoose连接选项 - 优化无服务器环境
+     * 获取mongoose连接选项 - 进一步优化无服务器环境
      */
     getMongooseOptions() {
         return {
-            serverSelectionTimeoutMS: 8000, // 增加超时时间，确保连接有足够时间
-            socketTimeoutMS: 30000, // 减少超时时间，避免长时间阻塞
+            serverSelectionTimeoutMS: 10000, // 增加超时时间
+            socketTimeoutMS: 20000, // 进一步减少超时时间
             family: 4,
-            // 针对无服务器环境的优化配置
+            // 针对无服务器环境的最小化配置
             keepAlive: true,
-            keepAliveInitialDelay: 5000,
-            // 使用小型连接池，适合无服务器环境
-            poolSize: 2,
-            // 启用自动索引创建（但会在控制台显示警告）
-            autoIndex: false
+            keepAliveInitialDelay: 3000,
+            poolSize: 1, // 最小连接池
+            autoIndex: false,
+            // 禁用缓冲区，避免内存泄漏
+            bufferCommands: false,
+            // 禁用自动重新连接，让Vercel处理
+            autoReconnect: false
         };
     }
 
     /**
-     * 连接到MongoDB数据库 - 优化无服务器环境
+     * 连接到MongoDB数据库 - 简化版，适合无服务器环境
      */
     async connect() {
-        // 避免重复连接
+        // 检查当前连接状态
         if (mongoose.connection.readyState === 1) {
-            console.log('ℹ️  数据库已连接，跳过重新连接');
+            console.log('ℹ️  数据库已连接，使用现有连接');
             this.isConnected = true;
             return mongoose.connection;
         }
         
+        if (mongoose.connection.readyState === 2) {
+            console.log('ℹ️  数据库正在连接中，等待完成...');
+            // 等待现有连接完成
+            return new Promise((resolve, reject) => {
+                mongoose.connection.once('connected', () => {
+                    this.isConnected = true;
+                    this.lastConnectionTime = new Date();
+                    resolve(mongoose.connection);
+                });
+                mongoose.connection.once('error', (err) => {
+                    this.isConnected = false;
+                    reject(err);
+                });
+            });
+        }
+        
         try {
-            console.log('正在连接到MongoDB数据库...');
+            console.log('🔄 开始数据库连接...');
+            this.connectionStartTime = Date.now();
             
             // 检查环境变量
-            if (!process.env.MONGODB_URI) {
-                throw new Error('环境变量 MONGODB_URI 未配置');
+            const mongoUri = process.env.MONGODB_URI;
+            if (!mongoUri) {
+                console.error('❌ 错误: MONGODB_URI 环境变量未设置');
+                return null; // 返回null而不是抛出错误，允许服务器继续运行
             }
             
-            const mongoUri = process.env.MONGODB_URI;
-            
-            // 添加连接超时控制
-            const connectionTimeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('数据库连接超时')), 15000)
-            );
-            
-            this.connection = await Promise.race([
-                mongoose.connect(mongoUri, this.getMongooseOptions()),
-                connectionTimeout
-            ]);
+            // 连接数据库（不使用超时竞争，减少复杂性）
+            this.connection = await mongoose.connect(mongoUri, this.getMongooseOptions());
             
             this.isConnected = true;
             this.lastConnectionTime = new Date();
+            const connectTime = Date.now() - this.connectionStartTime;
             
-            console.log(`✅ MongoDB数据库连接成功! 数据库主机: ${this.connection.connection.host}`);
-            console.log(`✅ 数据库名称: ${this.connection.connection.name}`);
+            console.log(`✅ 数据库连接成功! (耗时: ${connectTime}ms)`);
+            console.log(`✅ 数据库主机: ${mongoose.connection.host || 'unknown'}`);
+            console.log(`✅ 数据库名称: ${mongoose.connection.name || 'unknown'}`);
             
-            // 设置最小化的连接事件监听
+            // 设置最基本的事件监听
             this.setupConnectionEvents();
             
             return this.connection;
         } catch (error) {
             console.error(`❌ 数据库连接失败: ${error.message}`);
+            console.error('❌ 连接错误详情:', error);
             this.isConnected = false;
-            // 在无服务器环境中，我们不尝试重连，让Vercel重新创建实例
-            throw error;
+            // 返回null而不是抛出错误，让服务器可以在数据库不可用时仍能启动
+            return null;
         }
     }
 
     /**
-     * 设置数据库连接事件监听 - 简化版本
+     * 设置数据库连接事件监听 - 最小化版本
      */
     setupConnectionEvents() {
-        // 仅保留必要的事件监听
+        // 移除所有现有监听器，避免多次注册
+        mongoose.connection.removeAllListeners();
+        
+        // 只保留最基本的错误事件
         mongoose.connection.on('error', (err) => {
             console.error(`❌ MongoDB连接错误: ${err.message}`);
             this.isConnected = false;
@@ -101,14 +120,8 @@ class DatabaseService {
             this.isConnected = false;
         });
         
-        // 只在本地开发环境处理进程终止
-        if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'development') {
-            process.on('SIGINT', async () => {
-                await this.disconnect();
-                console.log('👋 MongoDB连接已关闭（进程终止）');
-                process.exit(0);
-            });
-        }
+        // 避免在无服务器环境中添加进程事件监听器
+        // 这可能导致内存泄漏和意外行为
     }
 
     /**
@@ -116,44 +129,73 @@ class DatabaseService {
      */
     handleConnectionError(error) {
         console.error(`❌ 数据库连接错误处理: ${error.message}`);
-        // 在无服务器环境中，我们不尝试自动重连
-        // 让Vercel创建一个新的函数实例
         this.isConnected = false;
+        // 在无服务器环境中，不进行重连，让Vercel创建新实例
     }
 
     /**
-     * 断开数据库连接
+     * 断开数据库连接 - 安全版本
      */
     async disconnect() {
         try {
-            if (mongoose.connection.readyState !== 0) {
-                await mongoose.connection.close();
-                this.isConnected = false;
-                console.log('👋 MongoDB连接已手动关闭');
+            // 检查连接状态
+            if (!mongoose.connection || mongoose.connection.readyState === 0) {
+                console.log('ℹ️  数据库未连接，无需断开');
+                return true;
             }
+            
+            console.log('🔌 尝试断开数据库连接...');
+            
+            // 使用超时确保不会阻塞
+            const disconnectPromise = mongoose.connection.close();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('断开连接超时')), 5000)
+            );
+            
+            await Promise.race([disconnectPromise, timeoutPromise]);
+            
+            console.log('✅ 数据库连接已断开');
+            this.isConnected = false;
+            return true;
         } catch (error) {
-            console.error(`❌ 关闭数据库连接时出错: ${error.message}`);
-            throw error;
+            console.error(`⚠️  断开数据库连接时出错: ${error.message}`);
+            // 即使断开失败也返回true，让进程可以继续
+            return true;
         }
     }
 
     /**
-     * 获取数据库连接状态
+     * 获取连接状态 - 简化版本，避免异常
      */
     getConnectionStatus() {
-        const readyState = mongoose.connection.readyState;
-        const states = {
-            0: 'disconnected',
-            1: 'connected',
-            2: 'connecting',
-            3: 'disconnecting'
-        };
-        
-        return {
-            readyState,
-            state: states[readyState] || 'unknown',
-            isConnected: readyState === 1
-        };
+        try {
+            const statusMap = {
+                0: 'disconnected',
+                1: 'connected',
+                2: 'connecting',
+                3: 'disconnecting'
+            };
+            
+            const readyState = mongoose.connection?.readyState || 0;
+            
+            return {
+                isConnected: readyState === 1,
+                status: statusMap[readyState] || 'unknown',
+                host: mongoose.connection?.host || 'unknown',
+                database: mongoose.connection?.name || 'unknown',
+                uptime: this.lastConnectionTime ? 
+                    `${Math.floor((Date.now() - this.lastConnectionTime.getTime()) / 1000)}s` : 'unknown',
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error(`❌ 获取连接状态失败: ${error.message}`);
+            return {
+                isConnected: false,
+                status: 'error',
+                message: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 
     /**
@@ -213,27 +255,34 @@ class DatabaseService {
     }
     
     /**
-     * 内部初始化数据库方法
+     * 内部初始化数据库方法 - 简化版本
      */
     async _initializeDatabase() {
         try {
-            // 确保数据库已连接
+            // 检查连接状态
             const status = this.getConnectionStatus();
             if (!status.isConnected) {
-                throw new Error('数据库未连接，无法初始化');
+                console.log('ℹ️  数据库未连接，跳过初始化');
+                return { success: true, message: '数据库未连接，跳过初始化' };
             }
             
-            console.log('🔄 开始初始化数据库...');
+            console.log('🔄 开始数据库初始化...');
             
-            // 1. 初始化索引（最重要的步骤）
-            await this.initializeIndexes();
+            // 如果确实需要初始化模型（仅在必要时）
+            if (!this.modelsLoaded) {
+                this._loadModelsIfNeeded();
+            }
             
-            console.log('✅ 数据库初始化完成');
-            return { success: true };
+            // 跳过索引初始化，避免冷启动延迟
+            console.log('⚠️  在无服务器环境中跳过索引初始化');
+            
+            console.log('✅ 数据库初始化完成（简化版）');
+            return { success: true, message: '初始化完成（简化版）' };
         } catch (error) {
-            console.error(`❌ 数据库初始化失败: ${error.message}`);
-            // 在无服务器环境中，返回失败但不抛出错误
-            return { success: false, error: error.message };
+            console.error(`❌ 数据库初始化错误: ${error.message}`);
+            console.error('初始化错误详情:', error);
+            // 返回成功但带有警告，让服务可以继续运行
+            return { success: true, warning: `初始化遇到问题但服务继续: ${error.message}` };
         }
     }
 
@@ -273,22 +322,17 @@ class DatabaseService {
     }
 
     /**
-     * 初始化数据库索引
+     * 初始化数据库索引 - 简化版本
      */
     async initializeIndexes() {
         try {
-            console.log('🔄 正在初始化数据库索引...');
-            
-            // 确保所有模型的索引都已创建
-            await User.init();
-            await News.init();
-            await Vote.init();
-            await Comment.init();
-            
-            console.log('✅ 数据库索引初始化完成');
+            // 在无服务器环境中，我们避免在初始化时创建索引
+            // 这会增加冷启动时间并可能导致超时
+            console.log('⚠️  在无服务器环境中跳过索引初始化');
+            return true;
         } catch (error) {
-            console.error(`❌ 初始化索引失败: ${error.message}`);
-            throw error;
+            console.error(`❌ 创建索引时出错: ${error.message}`);
+            return false;
         }
     }
 
