@@ -83,7 +83,7 @@ app.use(notFoundHandler);
 // 全局错误处理中间件
 app.use(globalErrorHandler);
 
-// 数据库连接和服务器启动
+// Database connection and server startup
 async function startServer() {
     try {
       const connection = await dbService.connect();
