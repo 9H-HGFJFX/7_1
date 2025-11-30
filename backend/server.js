@@ -81,44 +81,79 @@ app.use('/api/news', newsRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/comments', commentRoutes);
 
-// 独立健康检查端点 - 不依赖数据库
-app.get('/', (req, res) => {
-  console.log(`✅ 健康检查请求 - 不依赖数据库`);
+// 轻量级健康检查路由 (不依赖数据库)
+app.get('/api/health/liveness', (req, res) => {
+  console.log(`✅ 轻量级健康检查请求 - 不依赖数据库`);
   res.status(200).json({
-    status: 'ok',
-    message: '反假新闻系统后端API正在运行',
+    status: 'healthy',
+    message: 'Anti-Fake News API is running',
+    version: '1.0.0',
     timestamp: new Date().toISOString(),
-    environment: NODE_ENV,
-    service: 'api-service',
-    healthy: true,
-    note: '此端点不依赖数据库连接'
+    nodeVersion: process.version
   });
 });
 
-// 数据库连接状态检查端点
+// 根路由重定向到liveness健康检查
+app.get('/', (req, res) => {
+  res.redirect('/api/health/liveness');
+});
+
+// 数据库健康检查（作为深度健康检查）
 app.get('/api/health/db', async (req, res) => {
   console.log(`🔍 数据库健康检查请求`);
   try {
-    if (!dbService) {
-      return res.status(503).json({
+    // 设置较短的超时
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('数据库健康检查超时')), 5000) 
+    );
+    
+    // 使用现有的getConnectionStatus方法，适配原代码结构
+    const healthPromise = new Promise((resolve) => {
+      if (!dbService) {
+        resolve({ healthy: false, message: '数据库服务未初始化' });
+        return;
+      }
+      
+      try {
+        const status = dbService.getConnectionStatus();
+        resolve({
+          healthy: status.isConnected,
+          status: status.isConnected ? 'ok' : 'error',
+          connected: status.isConnected,
+          database: status.database || 'unknown',
+          host: status.host || 'unknown',
+          uptime: status.uptime || 'unknown'
+        });
+      } catch (err) {
+        resolve({ healthy: false, message: err.message });
+      }
+    });
+    
+    const health = await Promise.race([healthPromise, timeoutPromise]);
+    
+    if (health.healthy) {
+      res.status(200).json({
+        healthy: true,
+        status: 'ok',
+        connected: health.connected,
+        database: health.database,
+        host: health.host,
+        uptime: health.uptime
+      });
+    } else {
+      res.status(503).json({
+        healthy: false,
         status: 'error',
-        message: '数据库服务未初始化'
+        message: health.message || 'Database check failed'
       });
     }
-    
-    const status = dbService.getConnectionStatus();
-    res.json({
-      status: status.isConnected ? 'ok' : 'error',
-      connected: status.isConnected,
-      database: status.database || 'unknown',
-      host: status.host || 'unknown',
-      uptime: status.uptime || 'unknown'
-    });
   } catch (error) {
     console.error(`❌ 数据库健康检查失败: ${error.message}`);
     res.status(503).json({
+      healthy: false,
       status: 'error',
-      message: error.message
+      message: 'Database health check failed',
+      error: error.message
     });
   }
 });
