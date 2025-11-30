@@ -1,9 +1,9 @@
-// 加载环境变量
+// Load environment variables
 require('dotenv').config();
 
-// 环境变量配置检查和日志记录
-console.log(`🚀 启动应用程序 - 环境: ${process.env.NODE_ENV || 'development'}`);
-console.log(`📝 环境变量检查开始...`);
+// Environment variable configuration check and logging
+console.log(`🚀 Starting application - Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`📝 Environment variable check starting...`);
 
 // 检查关键环境变量
 const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
@@ -12,14 +12,14 @@ const missingEnvVars = requiredEnvVars.filter(varName =>
 );
 
 if (missingEnvVars.length > 0) {
-  console.error(`❌ 错误: 生产环境中缺少以下必需的环境变量: ${missingEnvVars.join(', ')}`);
-  // 在开发环境中继续，但在生产环境中记录错误
+  console.error(`❌ Error: Missing required environment variables in production: ${missingEnvVars.join(', ')}`);
+  // Continue in development, but log error in production
 }
 
-// 确保环境变量有合理的默认值
+// Ensure environment variables have reasonable defaults
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
-console.log(`📝 环境变量检查完成 - 端口: ${PORT}, 环境: ${NODE_ENV}`);
+console.log(`📝 Environment variable check completed - Port: ${PORT}, Environment: ${NODE_ENV}`);
 
 const express = require('express');
 const cors = require('cors');
@@ -42,9 +42,9 @@ const dbService = require('./services/dbService');
 // 创建Express应用
 const app = express();
 
-// CORS配置 - 动态从环境变量读取允许的源
+// CORS configuration - Dynamically read allowed origins from environment variables
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173').split(',');
-console.log(`🔄 CORS配置: 允许的源 ${allowedOrigins.join(', ')}`);
+console.log(`🔄 CORS configuration: Allowed origins ${allowedOrigins.join(', ')}`);
 
 app.use(cors({
   origin: allowedOrigins,
@@ -53,7 +53,7 @@ app.use(cors({
   maxAge: 86400 // 预检请求缓存时间
 }));
 
-// 添加请求日志中间件
+// Add request logging middleware
 app.use((req, res, next) => {
   console.log(`📡 ${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
@@ -61,33 +61,33 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 静态文件服务配置 - 支持favicon和上传文件
+// Static file service configuration - Support favicon and uploads
 const fs = require('fs');
 
-// 启用public文件夹的静态文件服务，用于提供favicon等资源
+// Enable static file service for public folder to serve favicon and other resources
 const publicDir = path.join(__dirname, 'public');
 if (fs.existsSync(publicDir)) {
   app.use(express.static(publicDir));
-  console.log('✅ 静态文件服务已启用: /public');
+  console.log('✅ Static file service enabled: /public');
 } else {
-  console.log('⚠️ public目录不存在，静态文件服务已部分禁用');
+  console.log('⚠️ public directory does not exist, static file service partially disabled');
 }
 
-// 文件上传目录的静态服务
+// Static service for file uploads directory
 const uploadsPath = path.join(__dirname, 'uploads');
 try {
-  // 尝试访问uploads目录，如果不存在则不会启用静态文件服务
+  // Try to access uploads directory, if it doesn't exist, static file service won't be enabled
   if (fs.existsSync(uploadsPath)) {
     app.use('/uploads', express.static(uploadsPath));
-    console.log('✅ 上传文件服务已启用: /uploads');
+    console.log('✅ Upload file service enabled: /uploads');
   } else {
-    console.log('⚠️ uploads目录不存在，上传文件服务已禁用');
+    console.log('⚠️ uploads directory does not exist, upload file service disabled');
   }
 } catch (error) {
-  console.log('⚠️ 初始化静态文件服务时出错:', error.message);
+  console.log('⚠️ Error initializing static file service:', error.message);
 }
 
-// 显式处理favicon.ico请求
+// Explicitly handle favicon.ico requests
 app.get('/favicon.ico', (req, res) => {
   const faviconPath = path.join(publicDir, 'favicon.ico');
   if (fs.existsSync(faviconPath)) {
@@ -97,15 +97,15 @@ app.get('/favicon.ico', (req, res) => {
   }
 })
 
-// 路由配置
+// Route configuration
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/comments', commentRoutes);
 
-// 轻量级健康检查路由 (不依赖数据库)
+// Lightweight health check route (database-independent)
 app.get('/api/health/liveness', (req, res) => {
-  console.log(`✅ 轻量级健康检查请求 - 不依赖数据库`);
+  console.log(`✅ Lightweight health check request - Database-independent`);
   res.status(200).json({
     status: 'healthy',
     message: 'Anti-Fake News API is running',
@@ -115,24 +115,24 @@ app.get('/api/health/liveness', (req, res) => {
   });
 });
 
-// 根路由重定向到liveness健康检查
+// Root route redirects to liveness health check
 app.get('/', (req, res) => {
   res.redirect('/api/health/liveness');
 });
 
-// 数据库健康检查（作为深度健康检查）
+// Database health check (as deep health check)
 app.get('/api/health/db', async (req, res) => {
-  console.log(`🔍 数据库健康检查请求`);
+  console.log(`🔍 Database health check request`);
   try {
     // 设置较短的超时
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('数据库健康检查超时')), 5000) 
+      setTimeout(() => reject(new Error('Database health check timeout')), 5000) 
     );
     
     // 使用现有的getConnectionStatus方法，适配原代码结构
     const healthPromise = new Promise((resolve) => {
       if (!dbService) {
-        resolve({ healthy: false, message: '数据库服务未初始化' });
+        resolve({ healthy: false, message: 'Database service not initialized' });
         return;
       }
       
@@ -170,7 +170,7 @@ app.get('/api/health/db', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error(`❌ 数据库健康检查失败: ${error.message}`);
+    console.error(`❌ Database health check failed: ${error.message}`);
     res.status(503).json({
       healthy: false,
       status: 'error',
@@ -180,22 +180,22 @@ app.get('/api/health/db', async (req, res) => {
   }
 });
 
-// 日志中间件
+// Logging middleware
 app.use(logger);
 
-// 404错误处理
+// 404 error handling
 app.use(notFoundHandler);
 
-// 错误处理中间件 - 增强版
+// Error handling middleware - Enhanced version
 app.use((err, req, res, next) => {
   const errorId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-  console.error(`❌ [${errorId}] 未捕获的错误: ${err.message}`);
+  console.error(`❌ [${errorId}] Uncaught error: ${err.message}`);
   console.error(err.stack);
   
   res.status(err.status || 500).json({
     error: {
       id: errorId,
-      message: NODE_ENV === 'production' ? '服务器内部错误' : err.message,
+      message: NODE_ENV === 'production' ? 'Internal server error' : err.message,
       status: err.status || 500,
       timestamp: new Date().toISOString()
     },
@@ -203,11 +203,11 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 处理
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     error: {
-      message: 'API端点不存在',
+      message: 'API endpoint not found',
       path: req.path,
       method: req.method,
       timestamp: new Date().toISOString()
@@ -215,85 +215,85 @@ app.use((req, res) => {
   });
 });
 
-// 启动服务器
+// Start server
 async function startServer() {
-  console.log('🚀 开始启动服务器...');
+  console.log('🚀 Starting server...');
   try {
-    // 连接数据库（添加超时控制）
+    // Connect to database (with timeout control)
     const dbConnectTimeout = setTimeout(() => {
-      throw new Error('数据库连接超时（15秒）');
+      throw new Error('Database connection timeout (15 seconds)');
     }, 15000);
     
     try {
       const connection = await dbService.connect();
       clearTimeout(dbConnectTimeout);
       if (connection && dbService.isConnected) {
-        console.log('✅ 数据库连接成功');
+        console.log('✅ Database connection successful');
       } else {
-        console.error('⚠️  数据库连接失败，但服务器将继续运行');
+        console.error('⚠️  Database connection failed, but server will continue running');
       }
     } catch (dbError) {
       clearTimeout(dbConnectTimeout);
-      console.error('⚠️  数据库连接失败，但服务器将继续运行:', dbError.message);
+      console.error('⚠️  Database connection failed, but server will continue running:', dbError.message);
       // 在无服务器环境中，我们记录错误但不阻止服务器启动
     }
     
-    // 尝试初始化数据库（如果已连接）
+    // Attempt to initialize database (if connected)
     try {
       const status = dbService.getConnectionStatus ? dbService.getConnectionStatus() : { isConnected: false };
       if (status.isConnected) {
-        console.log('🔄 开始初始化数据库...');
+        console.log('🔄 Initializing database...');
         const initResult = await dbService.initialize();
-        console.log('✅ 数据库初始化完成:', initResult ? (initResult.success ? '成功' : '失败') : '未知');
+        console.log('✅ Database initialization completed:', initResult ? (initResult.success ? 'success' : 'failure') : 'unknown');
       } else {
-        console.log('ℹ️  数据库未连接，跳过初始化');
+        console.log('ℹ️  Database not connected, skipping initialization');
       }
     } catch (initError) {
-      console.error('⚠️  数据库初始化失败，但服务器将继续运行:', initError.message);
+      console.error('⚠️  Database initialization failed, but server will continue running:', initError.message);
     }
     
-    // 启动HTTP服务器
+    // Start HTTP server
     const server = app.listen(PORT, () => {
-      console.log(`🚀 服务器运行在 http://localhost:${PORT}`);
-      console.log(`✅ 根路径健康检查: http://localhost:${PORT}/`);
-      console.log(`🔍 数据库健康检查: http://localhost:${PORT}/api/health/db`);
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
+      console.log(`✅ Root path health check: http://localhost:${PORT}/`);
+      console.log(`🔍 Database health check: http://localhost:${PORT}/api/health/db`);
     });
     
-    // 处理服务器关闭
+    // Handle server shutdown
     process.on('SIGTERM', () => {
-      console.log('👋 收到关闭信号，正在关闭服务器...');
+      console.log('👋 Received shutdown signal, closing server...');
       server.close(async () => {
         try {
           if (dbService && dbService.disconnect) {
             await dbService.disconnect();
           }
         } catch (disconnectError) {
-          console.error('⚠️  数据库断开连接时出错:', disconnectError.message);
+          console.error('⚠️  Error disconnecting from database:', disconnectError.message);
         }
-        console.log('✅ 服务器已关闭');
+        console.log('✅ Server closed');
         process.exit(0);
       });
     });
     
   } catch (error) {
-    console.error('❌ 服务器启动过程中发生错误:', error);
+    console.error('❌ Error during server startup:', error);
     console.error(error.stack);
     // 在本地开发环境中，如果启动失败，我们仍然尝试启动服务器以提供健康检查端点
     try {
       app.listen(PORT, () => {
-        console.log(`⚠️  服务器以降级模式启动在 http://localhost:${PORT}`);
-        console.log(`⚠️  数据库可能未连接，请检查日志`);
+        console.log(`⚠️  Server started in degraded mode at http://localhost:${PORT}`);
+        console.log(`⚠️  Database may not be connected, please check logs`);
       });
     } catch (listenError) {
-      console.error('❌ 无法启动服务器:', listenError);
+      console.error('❌ Failed to start server:', listenError);
     }
   }
 }
 
-// 仅在直接运行此文件时启动服务器，在Vercel环境中导出app实例
+// Only start server when this file is run directly, export app instance in Vercel environment
 if (require.main === module) {
   startServer();
 }
 
-// 导出app实例供Vercel使用 - 确保导出总是成功的
+// Export app instance for Vercel use - Ensure export is always successful
 module.exports = app;

@@ -37,7 +37,7 @@
 
     <!-- Main Content Area -->
     <main>
-        <!-- Filter and Search Area -->
+        <!-- Filter and search area -->
         <section class="filter-section">
             <div class="filter-options">
                 <label for="status-filter">Status Filter:</label>
@@ -55,12 +55,12 @@
             </div>
         </section>
 
-        <!-- News List Container -->
+        <!-- News list container -->
         <section id="news-list-container">
             <div class="loading" id="loading-indicator">Loading...</div>
             <div id="news-list"></div>
             
-            <!-- Pagination Control -->
+            <!-- Pagination controls -->
             <div id="pagination"></div>
         </section>
     </main>
@@ -70,23 +70,23 @@
         <p>&copy; 2025 Social Anti-Fake News System - SE331 Project</p>
     </footer>
 
-    <!-- 引入JavaScript模块 -->
+    <!-- Import JavaScript modules -->
     <script type="module">
-        // 导入组件和工具
+        // Import components and utilities
         import { initNewsList } from './components/newsList.js';
         import { initPagination } from './components/pagination.js';
         import { updateUIForAuth } from './utils/auth.js';
         import auth from './components/auth.js';
         
-        // 页面加载完成后初始化
+        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', async () => {
-            // 更新登录状态UI
+            // Update login status UI
             await updateUIForAuth();
             
-            // 初始化新闻列表
+            // Initialize news list
             await initNewsList();
             
-            // 初始化分页
+            // Initialize pagination
             initPagination();
             
             // 搜索功能

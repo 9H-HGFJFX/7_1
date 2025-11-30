@@ -1,22 +1,22 @@
-// 系统配置文件
+// System configuration file
 
 const config = {
-    // 服务器配置
+    // Server configuration
     port: process.env.PORT || 5000,
     
-    // 数据库配置
+    // Database configuration
     mongoURI: process.env.MONGODB_URI || 'mongodb://localhost:27017/anti-fake-news-system',
     
-    // JWT配置
+    // JWT configuration
     jwtSecret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
     jwtExpiration: '24h',
     
-    // 文件上传配置
+    // File upload configuration
     uploadPath: 'uploads',
     maxFileSize: 5 * 1024 * 1024, // 5MB
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     
-    // 跨域配置
+    // CORS configuration
     corsOptions: {
         origin: [
             'http://localhost:3000',
@@ -29,36 +29,36 @@ const config = {
         allowedHeaders: ['Content-Type', 'Authorization']
     },
     
-    // 新闻状态枚举
+    // News status enumeration
     newsStatus: {
         FAKE: 'Fake',
         NOT_FAKE: 'Not Fake',
         PENDING: 'Pending'
     },
     
-    // 用户角色枚举
+    // User role enumeration
     userRoles: {
         READER: 'Reader',
         MEMBER: 'Member',
         ADMINISTRATOR: 'Administrator'
     },
     
-    // 分页默认值
+    // Pagination default values
     pagination: {
         defaultPageSize: 10,
         maxPageSize: 100,
         defaultPage: 1
     },
     
-    // 投票相关配置
+    // Voting related configuration
     voting: {
-        // 有效投票数阈值，超过此值才会自动判断新闻真假
+        // Minimum votes threshold for automatic news verification
         minVotesForDecision: 10,
-        // 假新闻判定阈值（百分比）
+        // Fake news determination threshold (percentage)
         fakeNewsThreshold: 0.6 // 60%以上投票认为是假新闻
     },
     
-    // API路径前缀
+    // API path prefix
     apiPrefix: '/api'
 };
 
