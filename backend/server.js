@@ -124,12 +124,12 @@ app.get('/', (req, res) => {
 app.get('/api/health/db', async (req, res) => {
   console.log(`🔍 Database health check request`);
   try {
-    // 设置较短的超时
+    // Set a shorter timeout
     const timeoutPromise = new Promise((_, reject) => 
       setTimeout(() => reject(new Error('Database health check timeout')), 5000) 
     );
     
-    // 使用现有的getConnectionStatus方法，适配原代码结构
+    // Use the existing getConnectionStatus method to adapt to the original code structure
     const healthPromise = new Promise((resolve) => {
       if (!dbService) {
         resolve({ healthy: false, message: 'Database service not initialized' });

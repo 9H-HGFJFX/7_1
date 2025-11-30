@@ -251,7 +251,7 @@ class VoteService {
             
             return {
                 success: true,
-                message: `Successfully updated ${votes.length} vote records`,","},{
+                message: `Successfully updated ${votes.length} vote records`,
                 updatedCount: votes.length,
                 statusUpdates
             };
