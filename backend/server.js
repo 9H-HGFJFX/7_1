@@ -35,13 +35,13 @@ const dbService = require('./services/dbService');
 // 创建Express应用
 const app = express();
 
-// 中间件配置
+// Middleware configuration
 app.use(cors({ 
   origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
-  maxAge: 86400 // Preflight request cache time
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // Preflight request cache time
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
