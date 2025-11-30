@@ -1,12 +1,40 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "css/**/*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "js/**/*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "components/**/*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "utils/**/*.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "assets/**/*",
+      "use": "@vercel/static"
+    }
+  ],
   "routes": [
+ 
     {
       "handle": "filesystem"
     },
+
     {
       "src": "/api/(.*)",
-      "dest": "https://your-backend-url.onrender.com/api/$1",
+      "dest": "https://anti-fake-news-backend.onrender.com/api/$1",
       "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
       "headers": {
         "Access-Control-Allow-Origin": "*",
@@ -14,20 +42,47 @@
         "Access-Control-Allow-Headers": "Content-Type, Authorization"
       }
     },
+
     {
-      "src": "/(.*)",
+      "handle": "rewrite",
+      "src": "(.*)",
       "dest": "/index.html"
     }
   ],
-  "builds": [
+  "headers": [
     {
-      "src": "*.html",
-      "use": "@vercel/static"
+      "source": "/css/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
-      "src": "(.*)",
-      "use": "@vercel/static"
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ]
     }
   ],
-  "outputDirectory": "."
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "trailingSlash": false
 }

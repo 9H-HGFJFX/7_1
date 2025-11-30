@@ -1,12 +1,12 @@
 const mongoose = require('mongoose');
 
-// Vote Result Enums
+// Vote result enumeration
 const VOTE_RESULTS = {
     FAKE: 'Fake',
     NOT_FAKE: 'Not Fake'
 };
 
-// Vote Model Schema
+// Vote model Schema
 const voteSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -33,10 +33,10 @@ const voteSchema = new mongoose.Schema({
     }
 });
 
-// Create unique index to ensure a user can only vote once per news
+// Create unique index to ensure a user can vote only once per news item
 voteSchema.index({ userId: 1, newsId: 1 }, { unique: true });
 
-// Static method to check if user has already voted
+// Static method to check if user has voted
 voteSchema.statics.hasUserVoted = async function(userId, newsId) {
     const vote = await this.findOne({
         userId,
@@ -45,7 +45,7 @@ voteSchema.statics.hasUserVoted = async function(userId, newsId) {
     return !!vote;
 };
 
-// Static method to get user's vote record
+// Static method to get user vote record
 voteSchema.statics.getUserVote = async function(userId, newsId) {
     return await this.findOne({
         userId,

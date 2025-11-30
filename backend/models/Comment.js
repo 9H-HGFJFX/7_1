@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Comment Model Schema
+// Comment model Schema
 const commentSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -60,7 +60,7 @@ commentSchema.methods.deleteComment = function(deletedByUserId) {
     return this.save();
 };
 
-// Static method: Get comments by news ID (with pagination)
+// Static method: Get comments by news ID (supports pagination)
 commentSchema.statics.getCommentsByNewsId = async function(newsId, options = {}) {
     const {
         page = 1,
@@ -156,7 +156,7 @@ commentSchema.statics.getCommentsByUserId = async function(userId, options = {})
     };
 };
 
-// Static method: Delete all comments by user ID
+// Static method: Delete all comments by user
 commentSchema.statics.deleteUserComments = async function(userId) {
     return await this.updateMany(
         { userId, isDeleted: false },

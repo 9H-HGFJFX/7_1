@@ -1,13 +1,13 @@
 const mongoose = require('mongoose');
 
-// News Status Enums
+// News status enumeration
 const NEWS_STATUS = {
     FAKE: 'Fake',
     NOT_FAKE: 'Not Fake',
     PENDING: 'Pending'
 };
 
-// News Model Schema
+// News model Schema
 const newsSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -62,24 +62,24 @@ newsSchema.pre('save', function(next) {
     next();
 });
 
-// Method to calculate total votes
+// Get total votes method
 newsSchema.methods.getTotalVotes = function() {
     return this.fakeVoteCount + this.notFakeVoteCount;
 };
 
-// Method to calculate fake news vote percentage
+// Get fake vote percentage method
 newsSchema.methods.getFakeVotePercentage = function() {
     const totalVotes = this.getTotalVotes();
     return totalVotes > 0 ? (this.fakeVoteCount / totalVotes) * 100 : 0;
 };
 
-// Method to update vote counts
+// Update vote counts method
 newsSchema.methods.updateVoteCounts = function(fakeCount, notFakeCount) {
     this.fakeVoteCount = fakeCount;
     this.notFakeVoteCount = notFakeCount;
 };
 
-// Method to update news status based on votes
+// Update news status based on votes method
 newsSchema.methods.updateStatusBasedOnVotes = function(minVotes = 10, fakeThreshold = 0.6) {
     const totalVotes = this.getTotalVotes();
     
@@ -99,7 +99,7 @@ newsSchema.methods.updateStatusBasedOnVotes = function(minVotes = 10, fakeThresh
     return this.status;
 };
 
-// Static method: Get news list (with pagination, filtering, and search)
+// Static method: Get news list (supports pagination, filtering, searching)
 newsSchema.statics.getNewsList = async function(filters = {}, options = {}) {
     const {
         page = 1,

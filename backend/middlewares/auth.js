@@ -3,9 +3,9 @@ const { User, ROLES } = require('../models/User');
 const config = require('../config/config');
 
 /**
- * 生成JWT令牌
- * @param {Object} user - 用户对象
- * @returns {string} JWT令牌
+ * Generate JWT token
+ * @param {Object} user - User object
+ * @returns {string} JWT token
  */
 const generateToken = (user) => {
     return jwt.sign(
@@ -22,9 +22,9 @@ const generateToken = (user) => {
 };
 
 /**
- * 验证JWT令牌
- * @param {string} token - JWT令牌
- * @returns {Promise<Object>} 解码后的令牌数据
+ * Verify JWT token
+ * @param {string} token - JWT token
+ * @returns {Promise<Object>} Decoded token data
  */
 const verifyToken = (token) => {
     return new Promise((resolve, reject) => {
@@ -38,7 +38,7 @@ const verifyToken = (token) => {
 };
 
 /**
- * 认证中间件 - 验证用户是否已登录
+ * Authentication middleware - Verify if user is logged in
  */
 const authenticate = async (req, res, next) => {
     try {
@@ -48,7 +48,7 @@ const authenticate = async (req, res, next) => {
         if (!token) {
             return res.status(401).json({
                 success: false,
-                message: '未提供认证令牌'
+                message: 'Authentication token not provided'
             });
         }
         
@@ -61,7 +61,7 @@ const authenticate = async (req, res, next) => {
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: '用户不存在或已被删除'
+                message: 'User does not exist or has been deleted'
             });
         }
         
@@ -74,20 +74,20 @@ const authenticate = async (req, res, next) => {
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({
                 success: false,
-                message: '令牌已过期'
+                message: 'Token has expired'
             });
         }
         
         return res.status(401).json({
             success: false,
-            message: '认证失败: ' + error.message
+            message: 'Authentication failed: ' + error.message
         });
     }
 };
 
 /**
- * 角色权限检查中间件
- * @param {string} requiredRole - 需要的角色
+ * Role permission check middleware
+ * @param {string} requiredRole - Required role
  */
 const authorize = (requiredRole) => {
     return (req, res, next) => {
@@ -96,7 +96,7 @@ const authorize = (requiredRole) => {
             if (!req.user) {
                 return res.status(401).json({
                     success: false,
-                    message: '请先登录'
+                    message: 'Please log in first'
                 });
             }
             
@@ -111,7 +111,7 @@ const authorize = (requiredRole) => {
             if (!roleHierarchy[userRole] || roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
                 return res.status(403).json({
                     success: false,
-                    message: '权限不足，需要' + requiredRole + '角色'
+                    message: 'Insufficient permissions, requires ' + requiredRole + ' role'
                 });
             }
             
@@ -119,14 +119,14 @@ const authorize = (requiredRole) => {
         } catch (error) {
             return res.status(500).json({
                 success: false,
-                message: '权限检查失败: ' + error.message
+                message: 'Permission check failed: ' + error.message
             });
         }
     };
 };
 
 /**
- * 可选认证中间件 - 不强制要求登录，但如果提供了令牌则验证
+ * Optional authentication middleware - Not mandatory to log in, but verifies token if provided
  */
 const optionalAuthenticate = async (req, res, next) => {
     try {
@@ -158,20 +158,20 @@ const optionalAuthenticate = async (req, res, next) => {
 };
 
 /**
- * 检查用户是否为管理员
+ * Check if user is administrator
  */
 const isAdmin = authorize(ROLES.ADMINISTRATOR);
 
 /**
- * 检查用户是否为成员或管理员
+ * Check if user is member or administrator
  */
 const isMemberOrAdmin = authorize(ROLES.MEMBER);
 
 /**
- * 检查资源所有权
- * @param {string} resourceType - 资源类型
- * @param {string} resourceIdParam - 请求参数名
- * @param {string} model - Mongoose模型
+ * Check resource ownership
+ * @param {string} resourceType - Resource type
+ * @param {string} resourceIdParam - Request parameter name
+ * @param {string} model - Mongoose model
  */
 const checkOwnership = (resourceType, resourceIdParam, model) => {
     return async (req, res, next) => {
@@ -181,7 +181,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
             if (!resourceId) {
                 return res.status(400).json({
                     success: false,
-                    message: '缺少资源ID'
+                    message: 'Resource ID missing'
                 });
             }
             
@@ -191,7 +191,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
             if (!resource) {
                 return res.status(404).json({
                     success: false,
-                    message: resourceType + '不存在'
+                    message: resourceType + ' does not exist'
                 });
             }
             
@@ -199,7 +199,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
             if (resource.authorId && resource.authorId.toString() !== req.user._id.toString() && req.user.role !== ROLES.ADMINISTRATOR) {
                 return res.status(403).json({
                     success: false,
-                    message: '您没有权限修改此' + resourceType
+                    message: 'You do not have permission to modify this ' + resourceType
                 });
             }
             
@@ -210,7 +210,7 @@ const checkOwnership = (resourceType, resourceIdParam, model) => {
         } catch (error) {
             return res.status(500).json({
                 success: false,
-                message: '所有权检查失败: ' + error.message
+                message: 'Ownership check failed: ' + error.message
             });
         }
     };

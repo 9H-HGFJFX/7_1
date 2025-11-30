@@ -8,7 +8,7 @@ const { successResponse, errorResponse, paginatedResponse } = require('../middle
 const router = express.Router();
 
 /**
- * Get news comment list
+ * Get news comments list
  */
 router.get('/news/:newsId', async (req, res, next) => {
     try {
@@ -22,7 +22,7 @@ router.get('/news/:newsId', async (req, res, next) => {
         // Check if news exists
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 获取评论列表
@@ -65,7 +65,7 @@ router.post('/', authenticate, [
         // Check if news exists
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 创建评论
@@ -95,7 +95,7 @@ router.post('/', authenticate, [
 });
 
 /**
- * Delete comment (users can only delete their own comments, administrators can delete all comments)
+ * Delete comment (user can only delete their own comments, admin can delete all comments)
  */
 router.delete('/:commentId', authenticate, async (req, res, next) => {
     try {
@@ -105,7 +105,7 @@ router.delete('/:commentId', authenticate, async (req, res, next) => {
         const comment = await Comment.findById(commentId);
         
         if (!comment) {
-            return res.status(404).json(errorResponse(404, 'Comment does not exist'));
+            return res.status(404).json(errorResponse(404, 'Comment not found'));
         }
         
         // 检查权限：只有评论作者或管理员可以删除评论
@@ -128,7 +128,7 @@ router.delete('/:commentId', authenticate, async (req, res, next) => {
 });
 
 /**
- * Update comment (users can only update their own comments)
+ * Update comment (user can only update their own comments)
  */
 router.put('/:commentId', authenticate, [
     body('content').notEmpty().withMessage('Comment content cannot be empty')
@@ -147,7 +147,7 @@ router.put('/:commentId', authenticate, [
         const comment = await Comment.findById(commentId);
         
         if (!comment) {
-            return res.status(404).json(errorResponse(404, 'Comment does not exist'));
+            return res.status(404).json(errorResponse(404, 'Comment not found'));
         }
         
         // 检查权限：只有评论作者可以更新评论
@@ -196,13 +196,13 @@ router.get('/:commentId', async (req, res, next) => {
             .populate('deletedBy', 'firstName lastName');
         
         if (!comment) {
-            return res.status(404).json(errorResponse(404, 'Comment does not exist'));
+            return res.status(404).json(errorResponse(404, 'Comment not found'));
         }
         
         // 格式化响应数据
         const formattedComment = {
             ...comment.toObject(),
-            userName: comment.userId ? `${comment.userId.firstName} ${comment.userId.lastName}` : '未知用户',
+            userName: comment.userId ? `${comment.userId.firstName} ${comment.userId.lastName}` : 'Unknown User',
             deletedByUserName: comment.deletedBy ? `${comment.deletedBy.firstName} ${comment.deletedBy.lastName}` : null,
             userId: comment.userId?._id || comment.userId,
             deletedBy: comment.deletedBy?._id || comment.deletedBy
@@ -215,7 +215,7 @@ router.get('/:commentId', async (req, res, next) => {
 });
 
 /**
- * Admin: Get all comments (with filtering functionality)
+ * Admin: Get all comments (with filtering)
  */
 router.get('/', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -275,7 +275,7 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
 });
 
 /**
- * Get current user's comment list
+ * Get current user's comments list
  */
 router.get('/user/my-comments', authenticate, async (req, res, next) => {
     try {
@@ -298,7 +298,7 @@ router.get('/user/my-comments', authenticate, async (req, res, next) => {
             result.page,
             result.pageSize,
             result.pageCount,
-            'My comment list retrieved successfully'
+            'My comments list retrieved successfully'
         ));
     } catch (error) {
         next(error);

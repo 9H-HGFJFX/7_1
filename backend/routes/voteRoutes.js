@@ -27,7 +27,7 @@ router.post('/', authenticate, [
         // Check if news exists
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 检查用户是否已经投过票
@@ -64,7 +64,7 @@ router.post('/', authenticate, [
                 fakePercentage: news.getFakeVotePercentage().toFixed(1) + '%'
             },
             newsStatus: news.status
-        }, 'Vote successful'));
+        }, 'Vote submitted successfully'));
     } catch (error) {
         next(error);
     }
@@ -104,7 +104,7 @@ router.get('/news/:newsId/stats', async (req, res, next) => {
         // 检查新闻是否存在
         const news = await News.findById(newsId);
         if (!news) {
-            return res.status(404).json(errorResponse(404, '新闻不存在'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 获取投票统计
@@ -182,7 +182,7 @@ router.put('/:voteId/invalidate', authenticate, (req, res, next) => {
     Vote.invalidateVote(voteId)
         .then(invalidatedVote => {
             if (!invalidatedVote) {
-                return res.status(404).json(errorResponse(404, 'Vote record does not exist'));
+                return res.status(404).json(errorResponse(404, 'Vote record not found'));
             }
             
             // 重新计算新闻投票
@@ -191,7 +191,7 @@ router.put('/:voteId/invalidate', authenticate, (req, res, next) => {
                     return res.json(successResponse({
                         vote: invalidatedVote,
                         recalculation: recalcResult
-                    }, 'Vote has been marked as invalid'));
+                    }, 'Vote marked as invalid'));
                 });
         })
         .catch(error => next(error));

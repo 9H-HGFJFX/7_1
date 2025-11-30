@@ -5,10 +5,9 @@
 
 const mongoose = require('mongoose');
 const config = require('../config/config');
-const { User, ROLES } = require('../models/User');
-const { News, NEWS_STATUS } = require('../models/News');
-const { Vote, VOTE_RESULTS } = require('../models/Vote');
-const Comment = require('../models/Comment');
+
+// 避免在无服务器环境中加载所有模型，这可能导致冷启动延迟
+let User, ROLES, News, NEWS_STATUS, Vote, VOTE_RESULTS, Comment;
 
 class DatabaseService {
     constructor() {
@@ -17,6 +16,8 @@ class DatabaseService {
         this.isInitializing = false;
         this.initializationPromise = null;
         this.lastConnectionTime = null;
+        this.connectionStartTime = null;
+        this.modelsLoaded = false;
     }
 
     /**
@@ -24,16 +25,18 @@ class DatabaseService {
      */
     getMongooseOptions() {
         return {
-            serverSelectionTimeoutMS: 8000, // 增加超时时间，确保连接有足够时间
-            socketTimeoutMS: 30000, // 减少超时时间，避免长时间阻塞
+            serverSelectionTimeoutMS: 10000, // 增加超时时间
+            socketTimeoutMS: 20000,
             family: 4,
-            // 针对无服务器环境的优化配置
+            // 针对无服务器环境的最小化配置
             keepAlive: true,
-            keepAliveInitialDelay: 5000,
-            // 使用小型连接池，适合无服务器环境
-            poolSize: 2,
-            // 启用自动索引创建（但会在控制台显示警告）
-            autoIndex: false
+            keepAliveInitialDelay: 3000,
+            minPoolSize: 1, // 使用新版驱动支持的最小连接池设置
+            maxPoolSize: 5, // 最大连接池大小
+            autoIndex: false,
+            // 禁用缓冲区，避免内存泄漏
+            bufferCommands: false,
+            // autoReconnect选项已被移除，由MongoDB驱动自动处理
         };
     }
 
@@ -41,7 +44,7 @@ class DatabaseService {
      * Connect to MongoDB database - simplified version, suitable for serverless environment
      */
     async connect() {
-        // 避免重复连接
+        // 检查当前连接状态
         if (mongoose.connection.readyState === 1) {
             console.log('ℹ️  Database already connected, using existing connection');
             this.isConnected = true;
@@ -75,26 +78,18 @@ class DatabaseService {
                 return null; // 返回null而不是抛出错误，允许服务器继续运行
             }
             
-            const mongoUri = process.env.MONGODB_URI;
-            
-            // 添加连接超时控制
-            const connectionTimeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('数据库连接超时')), 15000)
-            );
-            
-            this.connection = await Promise.race([
-                mongoose.connect(mongoUri, this.getMongooseOptions()),
-                connectionTimeout
-            ]);
+            // 连接数据库（不使用超时竞争，减少复杂性）
+            this.connection = await mongoose.connect(mongoUri, this.getMongooseOptions());
             
             this.isConnected = true;
             this.lastConnectionTime = new Date();
+            const connectTime = Date.now() - this.connectionStartTime;
             
             console.log(`✅ Database connection successful! (Time taken: ${connectTime}ms)`);
             console.log(`✅ Database host: ${mongoose.connection.host || 'unknown'}`);
             console.log(`✅ Database name: ${mongoose.connection.name || 'unknown'}`);
             
-            // 设置最小化的连接事件监听
+            // 设置最基本的事件监听
             this.setupConnectionEvents();
             
             return this.connection;
@@ -102,8 +97,8 @@ class DatabaseService {
             console.error(`❌ Database connection failed: ${error.message}`);
             console.error('❌ Connection error details:', error);
             this.isConnected = false;
-            // 在无服务器环境中，我们不尝试重连，让Vercel重新创建实例
-            throw error;
+            // 返回null而不是抛出错误，让服务器可以在数据库不可用时仍能启动
+            return null;
         }
     }
 
@@ -111,7 +106,10 @@ class DatabaseService {
      * Set up database connection event listeners - minimal version
      */
     setupConnectionEvents() {
-        // 仅保留必要的事件监听
+        // 移除所有现有监听器，避免多次注册
+        mongoose.connection.removeAllListeners();
+        
+        // 只保留最基本的错误事件
         mongoose.connection.on('error', (err) => {
             console.error(`❌ MongoDB connection error: ${err.message}`);
             this.isConnected = false;
@@ -122,14 +120,8 @@ class DatabaseService {
             this.isConnected = false;
         });
         
-        // 只在本地开发环境处理进程终止
-        if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'development') {
-            process.on('SIGINT', async () => {
-                await this.disconnect();
-                console.log('👋 MongoDB连接已关闭（进程终止）');
-                process.exit(0);
-            });
-        }
+        // 避免在无服务器环境中添加进程事件监听器
+        // 这可能导致内存泄漏和意外行为
     }
 
     /**
@@ -138,6 +130,7 @@ class DatabaseService {
     handleConnectionError(error) {
         console.error(`❌ Database connection error handling: ${error.message}`);
         this.isConnected = false;
+        // 在无服务器环境中，不进行重连，让Vercel创建新实例
     }
 
     /**
@@ -266,7 +259,7 @@ class DatabaseService {
      */
     async _initializeDatabase() {
         try {
-            // 确保数据库已连接
+            // 检查连接状态
             const status = this.getConnectionStatus();
             if (!status.isConnected) {
                 console.log('ℹ️  Database not connected, skipping initialization');
@@ -275,8 +268,10 @@ class DatabaseService {
             
             console.log('🔄 Starting database initialization...');
             
-            // 1. 初始化索引（最重要的步骤）
-            await this.initializeIndexes();
+            // 如果确实需要初始化模型（仅在必要时）
+            if (!this.modelsLoaded) {
+                this._loadModelsIfNeeded();
+            }
             
             // 跳过索引初始化，避免冷启动延迟
             console.log('⚠️  Skipping index initialization in serverless environment');

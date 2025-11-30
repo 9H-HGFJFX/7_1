@@ -7,14 +7,14 @@ const { successResponse, errorResponse, paginatedResponse } = require('../middle
 const router = express.Router();
 
 /**
- * User Registration
+ * User registration
  */
 router.post('/register', [
     // 验证请求数据
     body('firstName').notEmpty().withMessage('First name cannot be empty'),
     body('lastName').notEmpty().withMessage('Last name cannot be empty'),
     body('email').isEmail().withMessage('Please enter a valid email address'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
@@ -64,7 +64,7 @@ router.post('/register', [
 });
 
 /**
- * User Login
+ * User login
  */
 router.post('/login', [
     body('email').isEmail().withMessage('Please enter a valid email address'),
@@ -90,7 +90,7 @@ router.post('/login', [
         const isPasswordValid = await user.validatePassword(password);
         
         if (!isPasswordValid) {
-            return res.status(401).json(errorResponse(401, '邮箱或密码错误', { credentials: '验证失败' }));
+            return res.status(401).json(errorResponse(401, 'Invalid email or password', { credentials: 'Authentication failed' }));
         }
         
         // 生成JWT令牌
@@ -115,7 +115,7 @@ router.post('/login', [
 });
 
 /**
- * Get Current User Information
+ * Get current user information
  */
 router.get('/me', authenticate, async (req, res, next) => {
     try {
@@ -134,7 +134,7 @@ router.get('/me', authenticate, async (req, res, next) => {
 });
 
 /**
- * Update Current User Information
+ * Update current user information
  */
 router.put('/me', authenticate, [
     body('firstName').optional().notEmpty().withMessage('First name cannot be empty'),
@@ -179,7 +179,7 @@ router.put('/me', authenticate, [
 });
 
 /**
- * Admin: Get User List
+ * Admin: Get user list
  */
 router.get('/', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -231,7 +231,7 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
 });
 
 /**
- * Admin: Set User Role (Upgrade to Member)
+ * Admin: Set user role
  */
 router.put('/:userId/role', authenticate, isAdmin, [
     body('role').isIn([ROLES.MEMBER, ROLES.READER]).withMessage('Invalid role')
@@ -240,7 +240,7 @@ router.put('/:userId/role', authenticate, isAdmin, [
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { userId } = req.params;
@@ -248,7 +248,7 @@ router.put('/:userId/role', authenticate, isAdmin, [
         
         // Cannot set user as administrator, administrator can only be set directly in the database
         if (role === ROLES.ADMINISTRATOR) {
-            return res.status(403).json(errorResponse(403, 'Cannot set administrator role via API'));
+            return res.status(403).json(errorResponse(403, 'Cannot set administrator role through API'));
         }
         
         // 查找并更新用户
@@ -268,14 +268,14 @@ router.put('/:userId/role', authenticate, isAdmin, [
             lastName: updatedUser.lastName,
             email: updatedUser.email,
             role: updatedUser.role
-        }, `User role has been updated to ${role}`));
+        }, `User role updated to ${role}`));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * Admin: Get User Details
+ * Admin: Get user details
  */
 router.get('/:userId', authenticate, isAdmin, async (req, res, next) => {
     try {

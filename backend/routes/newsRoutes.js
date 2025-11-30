@@ -8,7 +8,7 @@ const { successResponse, errorResponse, paginatedResponse } = require('../middle
 const router = express.Router();
 
 /**
- * Get news list (supports pagination, filtering, and searching)
+ * Get news list (supports pagination, filtering, searching)
  */
 router.get('/', async (req, res, next) => {
     try {
@@ -86,13 +86,13 @@ router.get('/:newsId', async (req, res, next) => {
         const news = await News.findById(newsId).populate('authorId', 'firstName lastName email');
         
         if (!news) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 格式化响应数据
         const formattedNews = {
             ...news.toObject(),
-            authorName: news.authorId ? `${news.authorId.firstName} ${news.authorId.lastName}` : '未知用户',
+            authorName: news.authorId ? `${news.authorId.firstName} ${news.authorId.lastName}` : 'Unknown User',
             authorId: news.authorId?._id || news.authorId,
             userVote: null
         };
@@ -113,7 +113,7 @@ router.get('/:newsId', async (req, res, next) => {
     }
 });
 
-    /**
+/**
  * Member: Submit news
  */
 router.post('/', authenticate, isMemberOrAdmin, [
@@ -155,8 +155,8 @@ router.post('/', authenticate, isMemberOrAdmin, [
     }
 });
 
-    /**
- * Author or admin: Update news
+/**
+ * Author or Admin: Update news
  */
 router.put('/:newsId', authenticate, checkOwnership('News', 'newsId', News), [
     body('title').optional().notEmpty().withMessage('News title cannot be empty'),
@@ -185,13 +185,13 @@ router.put('/:newsId', authenticate, checkOwnership('News', 'newsId', News), [
         ).populate('authorId', 'firstName lastName email');
         
         if (!updatedNews) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 格式化响应数据
         const formattedNews = {
             ...updatedNews.toObject(),
-            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : '未知用户',
+            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : 'Unknown User',
             authorId: updatedNews.authorId?._id || updatedNews.authorId
         };
         
@@ -201,7 +201,7 @@ router.put('/:newsId', authenticate, checkOwnership('News', 'newsId', News), [
     }
 });
 
-    /**
+/**
  * Admin: Delete news
  */
 router.delete('/:newsId', authenticate, isAdmin, async (req, res, next) => {
@@ -212,7 +212,7 @@ router.delete('/:newsId', authenticate, isAdmin, async (req, res, next) => {
         const deletedNews = await News.findByIdAndDelete(newsId);
         
         if (!deletedNews) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // Cascade delete logic can be added here, such as deleting related votes and comments
@@ -223,7 +223,7 @@ router.delete('/:newsId', authenticate, isAdmin, async (req, res, next) => {
     }
 });
 
-    /**
+/**
  * Admin: Manually set news status
  */
 router.put('/:newsId/status', authenticate, isAdmin, [
@@ -247,13 +247,13 @@ router.put('/:newsId/status', authenticate, isAdmin, [
         ).populate('authorId', 'firstName lastName email');
         
         if (!updatedNews) {
-            return res.status(404).json(errorResponse(404, 'News does not exist'));
+            return res.status(404).json(errorResponse(404, 'News not found'));
         }
         
         // 格式化响应数据
         const formattedNews = {
             ...updatedNews.toObject(),
-            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : '未知用户',
+            authorName: updatedNews.authorId ? `${updatedNews.authorId.firstName} ${updatedNews.authorId.lastName}` : 'Unknown User',
             authorId: updatedNews.authorId?._id || updatedNews.authorId
         };
         
@@ -263,7 +263,7 @@ router.put('/:newsId/status', authenticate, isAdmin, [
     }
 });
 
-    /**
+/**
  * Admin: Recalculate news votes and update status
  */
 router.post('/:newsId/recalculate-votes', authenticate, isAdmin, async (req, res, next) => {
@@ -292,7 +292,7 @@ router.post('/:newsId/recalculate-votes', authenticate, isAdmin, async (req, res
     }
 });
 
-    /**
+/**
  * Get current user's news list
  */
 router.get('/my-news', authenticate, async (req, res, next) => {

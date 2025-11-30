@@ -1,12 +1,13 @@
 /**
- * API工具模块
- * 负责处理与后端服务器的所有HTTP通信
+ * API Utility Module
+ * Responsible for handling all HTTP communications with the backend server
  */
 
 import { getToken } from './storage.js';
 
-// API基础URL配置 - 支持从环境变量读取
-const API_BASE_URL = process.env.API_URL || 'http://localhost:3001/api';
+// API Base URL Configuration - Uses global variable or default value in browser environment
+// In production environment, ensure API_URL is correctly set during deployment
+const API_BASE_URL = window.API_URL || 'https://anti-fake-news-backend.onrender.com/api' || 'http://localhost:3001/api';
 
 // 请求超时设置（毫秒）
 const REQUEST_TIMEOUT = 10000;
@@ -19,11 +20,11 @@ if (window.getUserInfo) {
 }
 
 /**
- * 创建带超时的fetch请求
- * @param {string} url - 请求URL
- * @param {Object} options - fetch选项
- * @param {number} timeout - 超时时间
- * @returns {Promise} 请求Promise
+ * Create fetch request with timeout
+ * @param {string} url - Request URL
+ * @param {Object} options - fetch options
+ * @param {number} timeout - Timeout duration
+ * @returns {Promise} Request Promise
  */
 function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
     return Promise.race([
@@ -35,9 +36,9 @@ function fetchWithTimeout(url, options, timeout = REQUEST_TIMEOUT) {
 }
 
 /**
- * 处理API响应
- * @param {Response} response - fetch响应对象
- * @returns {Promise<Object>} 处理后的响应数据
+ * Handle API response
+ * @param {Response} response - fetch response object
+ * @returns {Promise<Object>} Processed response data
  */
 async function handleResponse(response) {
     const contentType = response.headers.get('content-type');
@@ -50,13 +51,13 @@ async function handleResponse(response) {
             data = await response.text();
         }
     } catch (error) {
-        console.error('解析响应失败:', error);
-        throw new Error('解析响应失败');
+        console.error('Failed to parse response:', error);
+        throw new Error('Failed to parse response');
     }
     
     if (!response.ok) {
-        // 处理HTTP错误
-        const errorMessage = data.message || `HTTP错误 ${response.status}`;
+        // Handle HTTP error
+        const errorMessage = data.message || `HTTP error ${response.status}`;
         const error = new Error(errorMessage);
         error.status = response.status;
         error.data = data;
@@ -74,12 +75,12 @@ async function handleResponse(response) {
 }
 
 /**
- * 构建API请求选项
- * @param {string} method - HTTP方法
- * @param {Object|null} body - 请求体数据
- * @param {Object} additionalHeaders - 额外的请求头
- * @param {boolean} requiresAuth - 是否需要认证
- * @returns {Object} fetch选项对象
+ * Build API request options
+ * @param {string} method - HTTP method
+ * @param {Object|null} body - Request body data
+ * @param {Object} additionalHeaders - Additional request headers
+ * @param {boolean} requiresAuth - Whether authentication is required
+ * @returns {Object} fetch options object
  */
 function buildRequestOptions(method, body = null, additionalHeaders = {}, requiresAuth = true) {
     const headers = {
@@ -87,7 +88,7 @@ function buildRequestOptions(method, body = null, additionalHeaders = {}, requir
         ...additionalHeaders
     };
     
-    // 添加认证令牌
+    // Add authentication token
     if (requiresAuth) {
         const token = getToken();
         if (token) {
@@ -98,10 +99,10 @@ function buildRequestOptions(method, body = null, additionalHeaders = {}, requir
     const options = {
         method,
         headers,
-        credentials: 'include' // 包含cookies
+        credentials: 'include' // Include cookies
     };
     
-    // 添加请求体（如果有）
+    // Add request body (if available)
     if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
         options.body = JSON.stringify(body);
     }
@@ -110,12 +111,12 @@ function buildRequestOptions(method, body = null, additionalHeaders = {}, requir
 }
 
 /**
- * 通用API请求函数
- * @param {string} endpoint - API端点
- * @param {string} method - HTTP方法
- * @param {Object|null} body - 请求体数据
- * @param {Object} options - 额外选项
- * @returns {Promise<Object>} API响应数据
+ * Universal API request function
+ * @param {string} endpoint - API endpoint
+ * @param {string} method - HTTP method
+ * @param {Object|null} body - Request body data
+ * @param {Object} options - Additional options
+ * @returns {Promise<Object>} API response data
  */
 async function apiRequest(endpoint, method = 'GET', body = null, options = {}) {
     const { 
@@ -126,45 +127,45 @@ async function apiRequest(endpoint, method = 'GET', body = null, options = {}) {
         cacheKey = null
     } = options;
     
-    // 构建完整URL
+    // Build full URL
     const url = `${API_BASE_URL}${endpoint}`;
     
-    // 检查缓存（仅适用于GET请求）
+    // Check cache (only for GET requests)
     if (method === 'GET' && useCache && cacheKey) {
         const cachedData = getCache(cacheKey);
         if (cachedData) {
-            console.log(`从缓存获取数据: ${cacheKey}`);
+            console.log(`Fetching data from cache: ${cacheKey}`);
             return cachedData;
         }
     }
     
     try {
-        // 构建请求选项
+        // Build request options
         const requestOptions = buildRequestOptions(method, body, additionalHeaders, requiresAuth);
         
         // 发送请求
-        console.log(`发送${method}请求到: ${url}`);
+        console.log(`Sending ${method} request to: ${url}`);
         const response = await fetchWithTimeout(url, requestOptions, timeout);
         
-        // 处理响应
+        // Handle response
         const data = await handleResponse(response);
         
-        // 缓存响应（仅适用于GET请求）
+        // Cache response (only for GET requests)
         if (method === 'GET' && useCache && cacheKey) {
             setCache(cacheKey, data);
         }
         
         return data;
     } catch (error) {
-        console.error(`API请求失败 (${method} ${endpoint}):`, error);
+        console.error(`API request failed (${method} ${endpoint}):`, error);
         throw error;
     }
 }
 
 /**
- * 获取缓存数据（简单实现，实际项目可能使用更复杂的缓存策略）
- * @param {string} key - 缓存键
- * @returns {Object|null} 缓存数据
+ * Get cached data (simple implementation, real projects might use more complex caching strategies)
+ * @param {string} key - Cache key
+ * @returns {Object|null} Cached data
  */
 function getCache(key) {
     try {
@@ -174,7 +175,7 @@ function getCache(key) {
         const { data, timestamp, ttl } = JSON.parse(cached);
         const now = Date.now();
         
-        // 检查是否过期（默认5分钟）
+        // Check if expired (default 5 minutes)
         if (now - timestamp > (ttl || 5 * 60 * 1000)) {
             localStorage.removeItem(`api_cache_${key}`);
             return null;
@@ -182,16 +183,16 @@ function getCache(key) {
         
         return data;
     } catch (error) {
-        console.error('获取缓存失败:', error);
+        console.error('Failed to get cache:', error);
         return null;
     }
 }
 
 /**
- * 设置缓存数据
- * @param {string} key - 缓存键
- * @param {Object} data - 要缓存的数据
- * @param {number} ttl - 过期时间（毫秒）
+ * Set cached data
+ * @param {string} key - Cache key
+ * @param {Object} data - Data to cache
+ * @param {number} ttl - Time to live in milliseconds
  */
 function setCache(key, data, ttl) {
     try {
@@ -202,19 +203,19 @@ function setCache(key, data, ttl) {
         };
         localStorage.setItem(`api_cache_${key}`, JSON.stringify(cacheItem));
     } catch (error) {
-        console.error('设置缓存失败:', error);
+        console.error('Failed to set cache:', error);
     }
 }
 
 /**
- * 清除API缓存
- * @param {string|null} key - 可选的特定缓存键
+ * Clear API cache
+ * @param {string|null} key - Optional specific cache key
  */
 export function clearApiCache(key = null) {
     if (key) {
         localStorage.removeItem(`api_cache_${key}`);
     } else {
-        // 清除所有API缓存
+        // Clear all API caches
         Object.keys(localStorage).forEach(item => {
             if (item.startsWith('api_cache_')) {
                 localStorage.removeItem(item);
@@ -223,23 +224,23 @@ export function clearApiCache(key = null) {
     }
 }
 
-// ===== 用户相关API =====
+// ===== User-Related API =====
 
 /**
- * 用户登录
- * @param {Object} credentials - 登录凭证
- * @param {string} credentials.email - 邮箱
- * @param {string} credentials.password - 密码
- * @returns {Promise<Object>} 登录响应
+ * User login
+ * @param {Object} credentials - Login credentials
+ * @param {string} credentials.email - Email
+ * @param {string} credentials.password - Password
+ * @returns {Promise<Object>} Login response
  */
 export async function login(credentials) {
     return apiRequest('/users/login', 'POST', credentials, { requiresAuth: false });
 }
 
 /**
- * 用户注册
- * @param {Object} userData - 用户数据
- * @returns {Promise<Object>} 注册响应
+ * User registration
+ * @param {Object} userData - User data
+ * @returns {Promise<Object>} Registration response
  */
 export async function register(userData) {
     return apiRequest('/users/register', 'POST', userData, { requiresAuth: false });
@@ -247,37 +248,37 @@ export async function register(userData) {
 
 // 临时注释掉fetchUserInfo函数以测试
 // /**
-//  * 获取当前用户信息
-//  * @returns {Promise<Object>} 用户信息
+//  * Get current user information
+//  * @returns {Promise<Object>} User information
 //  */
 // export async function fetchUserInfo() {
 //     return apiRequest('/users/profile');
 // }
 
 /**
- * 更新用户信息
- * @param {Object} userData - 更新的用户数据
- * @returns {Promise<Object>} 更新后的用户信息
+ * Update user information
+ * @param {Object} userData - Updated user data
+ * @returns {Promise<Object>} Updated user information
  */
 export async function updateUserProfile(userData) {
     return apiRequest('/users/profile', 'PUT', userData);
 }
 
 /**
- * 更新用户密码
- * @param {Object} passwordData - 密码数据
- * @param {string} passwordData.currentPassword - 当前密码
- * @param {string} passwordData.newPassword - 新密码
- * @returns {Promise<Object>} 更新结果
+ * Update user password
+ * @param {Object} passwordData - Password data
+ * @param {string} passwordData.currentPassword - Current password
+ * @param {string} passwordData.newPassword - New password
+ * @returns {Promise<Object>} Update result
  */
 export async function updatePassword(passwordData) {
     return apiRequest('/users/password', 'PUT', passwordData);
 }
 
 /**
- * 获取用户列表（管理员）
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 用户列表
+ * Get user list (Admin)
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} User list
  */
 export async function getUsers(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -286,31 +287,31 @@ export async function getUsers(params = {}) {
 }
 
 /**
- * 获取单个用户详情（管理员）
- * @param {string} userId - 用户ID
- * @returns {Promise<Object>} 用户详情
+ * Get single user details (Admin)
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} User details
  */
 export async function getUserById(userId) {
     return apiRequest(`/users/${userId}`);
 }
 
 /**
- * 设置用户角色（管理员）
- * @param {string} userId - 用户ID
- * @param {Object} roleData - 角色数据
- * @param {string} roleData.role - 新角色
- * @returns {Promise<Object>} 更新结果
+ * Set user role (Admin)
+ * @param {string} userId - User ID
+ * @param {Object} roleData - Role data
+ * @param {string} roleData.role - New role
+ * @returns {Promise<Object>} Update result
  */
 export async function setUserRole(userId, roleData) {
     return apiRequest(`/users/${userId}/role`, 'PUT', roleData);
 }
 
-// ===== 新闻相关API =====
+// ===== News-Related API =====
 
 /**
- * 获取新闻列表
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 新闻列表和分页信息
+ * Get news list
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} News list and pagination info
  */
 export async function fetchNews(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -319,98 +320,98 @@ export async function fetchNews(params = {}) {
 }
 
 /**
- * 获取新闻详情
- * @param {string} newsId - 新闻ID
- * @returns {Promise<Object>} 新闻详情
+ * Get news details
+ * @param {string} newsId - News ID
+ * @returns {Promise<Object>} News details
  */
 export async function getNewsById(newsId) {
     return apiRequest(`/news/${newsId}`, 'GET', null, { useCache: true });
 }
 
 /**
- * 提交新闻
- * @param {Object} newsData - 新闻数据
- * @returns {Promise<Object>} 创建的新闻
+ * Submit news
+ * @param {Object} newsData - News data
+ * @returns {Promise<Object>} Created news
  */
 export async function submitNews(newsData) {
     return apiRequest('/news', 'POST', newsData);
 }
 
 /**
- * 更新新闻
- * @param {string} newsId - 新闻ID
- * @param {Object} newsData - 更新的新闻数据
- * @returns {Promise<Object>} 更新后的新闻
+ * Update news
+ * @param {string} newsId - News ID
+ * @param {Object} newsData - Updated news data
+ * @returns {Promise<Object>} Updated news
  */
 export async function updateNews(newsId, newsData) {
     return apiRequest(`/news/${newsId}`, 'PUT', newsData);
 }
 
 /**
- * 删除新闻（管理员）
- * @param {string} newsId - 新闻ID
- * @returns {Promise<Object>} 删除结果
+ * Delete news (Admin)
+ * @param {string} newsId - News ID
+ * @returns {Promise<Object>} Deletion result
  */
 export async function deleteNews(newsId) {
     return apiRequest(`/news/${newsId}`, 'DELETE');
 }
 
 /**
- * 更新新闻状态（管理员）
- * @param {string} newsId - 新闻ID
- * @param {Object} statusData - 状态数据
- * @param {string} statusData.status - 新状态
- * @returns {Promise<Object>} 更新结果
+ * Update news status (Admin)
+ * @param {string} newsId - News ID
+ * @param {Object} statusData - Status data
+ * @param {string} statusData.status - New status
+ * @returns {Promise<Object>} Update result
  */
 export async function updateNewsStatus(newsId, statusData) {
     return apiRequest(`/news/${newsId}/status`, 'PUT', statusData);
 }
 
 /**
- * 重新计算新闻投票分数（管理员）
- * @param {string} newsId - 新闻ID
- * @returns {Promise<Object>} 计算结果
+ * Recalculate news vote scores (Admin)
+ * @param {string} newsId - News ID
+ * @returns {Promise<Object>} Calculation result
  */
 export async function recalculateNewsVotes(newsId) {
     return apiRequest(`/news/${newsId}/recalculate-votes`, 'POST');
 }
 
-// ===== 投票相关API =====
+// ===== Voting-Related API =====
 
 /**
- * 提交投票
- * @param {Object} voteData - 投票数据
- * @param {string} voteData.newsId - 新闻ID
- * @param {string} voteData.voteResult - 投票结果 ('Fake' 或 'Not Fake')
- * @returns {Promise<Object>} 投票结果
+ * Submit vote
+ * @param {Object} voteData - Vote data
+ * @param {string} voteData.newsId - News ID
+ * @param {string} voteData.voteResult - Vote result ('Fake' or 'Not Fake')
+ * @returns {Promise<Object>} Vote result
  */
 export async function submitVote(voteData) {
     return apiRequest('/votes', 'POST', voteData);
 }
 
 /**
- * 获取用户对特定新闻的投票
- * @param {string} newsId - 新闻ID
- * @returns {Promise<Object|null>} 投票信息或null
+ * Get user vote for specific news
+ * @param {string} newsId - News ID
+ * @returns {Promise<Object|null>} Vote info or null
  */
 export async function getUserVoteForNews(newsId) {
     return apiRequest(`/votes/user/${newsId}`);
 }
 
 /**
- * 获取新闻投票统计
- * @param {string} newsId - 新闻ID
- * @returns {Promise<Object>} 投票统计数据
+ * Get news vote statistics
+ * @param {string} newsId - News ID
+ * @returns {Promise<Object>} Vote statistics data
  */
 export async function getNewsVoteStats(newsId) {
     return apiRequest(`/votes/stats/${newsId}`, 'GET', null, { useCache: true });
 }
 
 /**
- * 获取新闻所有投票记录（管理员）
- * @param {string} newsId - 新闻ID
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 投票记录列表
+ * Get all vote records for news (Admin)
+ * @param {string} newsId - News ID
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Vote records list
  */
 export async function getNewsVotes(newsId, params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -419,18 +420,18 @@ export async function getNewsVotes(newsId, params = {}) {
 }
 
 /**
- * 标记投票为无效（管理员）
- * @param {string} voteId - 投票ID
- * @returns {Promise<Object>} 更新结果
+ * Mark vote as invalid (Admin)
+ * @param {string} voteId - Vote ID
+ * @returns {Promise<Object>} Update result
  */
 export async function invalidateVote(voteId) {
     return apiRequest(`/votes/${voteId}/invalidate`, 'PUT');
 }
 
 /**
- * 获取用户投票历史
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 投票历史列表
+ * Get user vote history
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Vote history list
  */
 export async function getUserVotes(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -438,13 +439,13 @@ export async function getUserVotes(params = {}) {
     return apiRequest(endpoint);
 }
 
-// ===== 评论相关API =====
+// ===== Comment-Related API =====
 
 /**
- * 获取新闻评论列表
- * @param {string} newsId - 新闻ID
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 评论列表和分页信息
+ * Get news comments list
+ * @param {string} newsId - News ID
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Comments list and pagination info
  */
 export async function getNewsComments(newsId, params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -453,49 +454,49 @@ export async function getNewsComments(newsId, params = {}) {
 }
 
 /**
- * 提交评论
- * @param {Object} commentData - 评论数据
- * @param {string} commentData.newsId - 新闻ID
- * @param {string} commentData.content - 评论内容
- * @param {string} [commentData.imageUrl] - 图片URL（可选）
- * @returns {Promise<Object>} 创建的评论
+ * Submit comment
+ * @param {Object} commentData - Comment data
+ * @param {string} commentData.newsId - News ID
+ * @param {string} commentData.content - Comment content
+ * @param {string} [commentData.imageUrl] - Image URL (optional)
+ * @returns {Promise<Object>} Created comment
  */
 export async function submitComment(commentData) {
     return apiRequest('/comments', 'POST', commentData);
 }
 
 /**
- * 删除评论
- * @param {string} commentId - 评论ID
- * @returns {Promise<Object>} 删除结果
+ * Delete comment
+ * @param {string} commentId - Comment ID
+ * @returns {Promise<Object>} Deletion result
  */
 export async function deleteComment(commentId) {
     return apiRequest(`/comments/${commentId}`, 'DELETE');
 }
 
 /**
- * 更新评论
- * @param {string} commentId - 评论ID
- * @param {Object} commentData - 更新的评论数据
- * @returns {Promise<Object>} 更新后的评论
+ * Update comment
+ * @param {string} commentId - Comment ID
+ * @param {Object} commentData - Updated comment data
+ * @returns {Promise<Object>} Updated comment
  */
 export async function updateComment(commentId, commentData) {
     return apiRequest(`/comments/${commentId}`, 'PUT', commentData);
 }
 
 /**
- * 获取评论详情
- * @param {string} commentId - 评论ID
- * @returns {Promise<Object>} 评论详情
+ * Get comment details
+ * @param {string} commentId - Comment ID
+ * @returns {Promise<Object>} Comment details
  */
 export async function getCommentById(commentId) {
     return apiRequest(`/comments/${commentId}`);
 }
 
 /**
- * 获取所有评论（管理员）
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 评论列表
+ * Get all comments (Admin)
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Comments list
  */
 export async function getAllComments(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -504,9 +505,9 @@ export async function getAllComments(params = {}) {
 }
 
 /**
- * 获取当前用户的评论列表
- * @param {Object} params - 查询参数
- * @returns {Promise<Object>} 评论列表
+ * Get current user's comments list
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Object>} Comments list
  */
 export async function getUserComments(params = {}) {
     const queryString = new URLSearchParams(params).toString();
@@ -514,11 +515,11 @@ export async function getUserComments(params = {}) {
     return apiRequest(endpoint);
 }
 
-// 导出API基础配置
+// Export API base configuration
 export const apiConfig = {
     baseURL: API_BASE_URL,
     timeout: REQUEST_TIMEOUT
 };
 
-// 默认导出通用请求函数
+// Default export universal request function
 export default apiRequest;

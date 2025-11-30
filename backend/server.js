@@ -10,9 +10,16 @@ const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
 const missingEnvVars = requiredEnvVars.filter(varName => 
   process.env.NODE_ENV === 'production' && !process.env[varName]
 );
+
 if (missingEnvVars.length > 0) {
-    console.warn(`⚠️  Warning: Missing required environment variables: ${missingEnvVars.join(', ')}`);
+  console.error(`❌ Error: Missing required environment variables in production: ${missingEnvVars.join(', ')}`);
+  // Continue in development, but log error in production
 }
+
+// Ensure environment variables have reasonable defaults
+const PORT = process.env.PORT || 3000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+console.log(`📝 Environment variable check completed - Port: ${PORT}, Environment: ${NODE_ENV}`);
 
 const express = require('express');
 const cors = require('cors');
@@ -35,56 +42,188 @@ const dbService = require('./services/dbService');
 // 创建Express应用
 const app = express();
 
-// Middleware configuration
-app.use(cors({ 
-  origin: process.env.CORS_ORIGIN || '*',
+// CORS configuration - Dynamically read allowed origins from environment variables
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:5173').split(',');
+console.log(`🔄 CORS configuration: Allowed origins ${allowedOrigins.join(', ')}`);
+
+app.use(cors({
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
-  maxAge: 86400, // Preflight request cache time
-  allowedHeaders: ['Content-Type', 'Authorization']
+  maxAge: 86400 // Preflight request cache time
 }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`📡 ${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 静态文件服务（用于图片上传） - 添加错误处理以防uploads目录不存在
-const uploadsPath = path.join(__dirname, 'uploads');
-try {
-  // 尝试访问uploads目录，如果不存在则不会启用静态文件服务
-  const fs = require('fs');
-  if (fs.existsSync(uploadsPath)) {
-    app.use('/uploads', express.static(uploadsPath));
-  } else {
-    console.log('⚠️ uploads目录不存在，静态文件服务已禁用');
-  }
-} catch (error) {
-  console.log('⚠️ 初始化静态文件服务时出错:', error.message);
+// Static file service configuration - Support favicon and uploads
+const fs = require('fs');
+
+// Enable static file service for public folder to serve favicon and other resources
+const publicDir = path.join(__dirname, 'public');
+if (fs.existsSync(publicDir)) {
+  app.use(express.static(publicDir));
+  console.log('✅ Static file service enabled: /public');
+} else {
+  console.log('⚠️ public directory does not exist, static file service partially disabled');
 }
 
-// 路由配置
+// Static service for file uploads directory
+const uploadsPath = path.join(__dirname, 'uploads');
+try {
+  // Try to access uploads directory, if it doesn't exist, static file service won't be enabled
+  if (fs.existsSync(uploadsPath)) {
+    app.use('/uploads', express.static(uploadsPath));
+    console.log('✅ Upload file service enabled: /uploads');
+  } else {
+    console.log('⚠️ uploads directory does not exist, upload file service disabled');
+  }
+} catch (error) {
+  console.log('⚠️ Error initializing static file service:', error.message);
+}
+
+// Explicitly handle favicon.ico requests
+app.get('/favicon.ico', (req, res) => {
+  const faviconPath = path.join(publicDir, 'favicon.ico');
+  if (fs.existsSync(faviconPath)) {
+    res.sendFile(faviconPath);
+  } else {
+    res.status(404).end();
+  }
+})
+
+// Route configuration
 app.use('/api/users', userRoutes);
 app.use('/api/news', newsRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/comments', commentRoutes);
 
-// 根路径健康检查
-app.get('/', (req, res) => {
-    res.json({
-        message: '社交反假新闻系统API服务正在运行',
-        version: '1.0.0'
-    });
+// Lightweight health check route (database-independent)
+app.get('/api/health/liveness', (req, res) => {
+  console.log(`✅ Lightweight health check request - Database-independent`);
+  res.status(200).json({
+    status: 'healthy',
+    message: 'Anti-Fake News API is running',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    nodeVersion: process.version
+  });
 });
 
-// 日志中间件
+// Root route redirects to liveness health check
+app.get('/', (req, res) => {
+  res.redirect('/api/health/liveness');
+});
+
+// Database health check (as deep health check)
+app.get('/api/health/db', async (req, res) => {
+  console.log(`🔍 Database health check request`);
+  try {
+    // 设置较短的超时
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database health check timeout')), 5000) 
+    );
+    
+    // 使用现有的getConnectionStatus方法，适配原代码结构
+    const healthPromise = new Promise((resolve) => {
+      if (!dbService) {
+        resolve({ healthy: false, message: 'Database service not initialized' });
+        return;
+      }
+      
+      try {
+        const status = dbService.getConnectionStatus();
+        resolve({
+          healthy: status.isConnected,
+          status: status.isConnected ? 'ok' : 'error',
+          connected: status.isConnected,
+          database: status.database || 'unknown',
+          host: status.host || 'unknown',
+          uptime: status.uptime || 'unknown'
+        });
+      } catch (err) {
+        resolve({ healthy: false, message: err.message });
+      }
+    });
+    
+    const health = await Promise.race([healthPromise, timeoutPromise]);
+    
+    if (health.healthy) {
+      res.status(200).json({
+        healthy: true,
+        status: 'ok',
+        connected: health.connected,
+        database: health.database,
+        host: health.host,
+        uptime: health.uptime
+      });
+    } else {
+      res.status(503).json({
+        healthy: false,
+        status: 'error',
+        message: health.message || 'Database check failed'
+      });
+    }
+  } catch (error) {
+    console.error(`❌ Database health check failed: ${error.message}`);
+    res.status(503).json({
+      healthy: false,
+      status: 'error',
+      message: 'Database health check failed',
+      error: error.message
+    });
+  }
+});
+
+// Logging middleware
 app.use(logger);
 
-// 404 Error Handler
+// 404 error handling
 app.use(notFoundHandler);
 
-// Global error handling middleware
-app.use(globalErrorHandler);
+// Error handling middleware - Enhanced version
+app.use((err, req, res, next) => {
+  const errorId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+  console.error(`❌ [${errorId}] Uncaught error: ${err.message}`);
+  console.error(err.stack);
+  
+  res.status(err.status || 500).json({
+    error: {
+      id: errorId,
+      message: NODE_ENV === 'production' ? 'Internal server error' : err.message,
+      status: err.status || 500,
+      timestamp: new Date().toISOString()
+    },
+    stack: NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
 
-// Database connection and server startup
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      message: 'API endpoint not found',
+      path: req.path,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    }
+  });
+});
+
+// Start server
 async function startServer() {
+  console.log('🚀 Starting server...');
+  try {
+    // Connect to database (with timeout control)
+    const dbConnectTimeout = setTimeout(() => {
+      throw new Error('Database connection timeout (15 seconds)');
+    }, 15000);
+    
     try {
       const connection = await dbService.connect();
       clearTimeout(dbConnectTimeout);
@@ -151,29 +290,10 @@ async function startServer() {
   }
 }
 
-// 添加健康检查端点
-app.get('/health', async (req, res) => {
-    try {
-        const dbHealth = await dbService.checkHealth();
-        
-        res.status(dbHealth.healthy ? 200 : 503).json({
-            status: dbHealth.healthy ? 'healthy' : 'unhealthy',
-            timestamp: new Date().toISOString(),
-            version: '1.0.0',
-            database: dbHealth
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message
-        });
-    }
-});
-
-// 导出app实例供Vercel使用
-module.exports = app;
-
-// 仅在本地开发环境启动服务器
-if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'development') {
+// Only start server when this file is run directly, export app instance in Vercel environment
+if (require.main === module) {
   startServer();
 }
+
+// Export app instance for Vercel use - Ensure export is always successful
+module.exports = app;
