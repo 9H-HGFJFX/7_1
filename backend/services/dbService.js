@@ -14,108 +14,111 @@ class DatabaseService {
     constructor() {
         this.connection = null;
         this.isConnected = false;
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
-        this.reconnectInterval = 3000; // 3秒
+        this.isInitializing = false;
+        this.initializationPromise = null;
+        this.lastConnectionTime = null;
     }
 
     /**
-     * 获取mongoose连接选项
+     * 获取mongoose连接选项 - 优化无服务器环境
      */
     getMongooseOptions() {
         return {
-            serverSelectionTimeoutMS: 5000,
-            socketTimeoutMS: 45000,
-            family: 4
-            // 移除了过时的选项：useNewUrlParser, useUnifiedTopology, autoReconnect, reconnectTries, reconnectInterval
+            serverSelectionTimeoutMS: 8000, // 增加超时时间，确保连接有足够时间
+            socketTimeoutMS: 30000, // 减少超时时间，避免长时间阻塞
+            family: 4,
+            // 针对无服务器环境的优化配置
+            keepAlive: true,
+            keepAliveInitialDelay: 5000,
+            // 使用小型连接池，适合无服务器环境
+            poolSize: 2,
+            // 启用自动索引创建（但会在控制台显示警告）
+            autoIndex: false
         };
     }
 
     /**
-     * 连接到MongoDB数据库
+     * 连接到MongoDB数据库 - 优化无服务器环境
      */
     async connect() {
+        // 避免重复连接
+        if (mongoose.connection.readyState === 1) {
+            console.log('ℹ️  数据库已连接，跳过重新连接');
+            this.isConnected = true;
+            return mongoose.connection;
+        }
+        
         try {
             console.log('正在连接到MongoDB数据库...');
-            console.log('调试信息: config.mongoUri =', config.mongoUri);
-            console.log('调试信息: process.env.MONGODB_URI =', process.env.MONGODB_URI);
             
-            // 直接使用环境变量而不是config对象
-            const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/anti-fake-news-system';
-            this.connection = await mongoose.connect(mongoUri, this.getMongooseOptions());
+            // 检查环境变量
+            if (!process.env.MONGODB_URI) {
+                throw new Error('环境变量 MONGODB_URI 未配置');
+            }
+            
+            const mongoUri = process.env.MONGODB_URI;
+            
+            // 添加连接超时控制
+            const connectionTimeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('数据库连接超时')), 15000)
+            );
+            
+            this.connection = await Promise.race([
+                mongoose.connect(mongoUri, this.getMongooseOptions()),
+                connectionTimeout
+            ]);
+            
             this.isConnected = true;
-            this.reconnectAttempts = 0;
+            this.lastConnectionTime = new Date();
             
             console.log(`✅ MongoDB数据库连接成功! 数据库主机: ${this.connection.connection.host}`);
             console.log(`✅ 数据库名称: ${this.connection.connection.name}`);
             
-            // 设置连接事件监听
+            // 设置最小化的连接事件监听
             this.setupConnectionEvents();
             
             return this.connection;
         } catch (error) {
             console.error(`❌ 数据库连接失败: ${error.message}`);
-            this.handleConnectionError(error);
+            this.isConnected = false;
+            // 在无服务器环境中，我们不尝试重连，让Vercel重新创建实例
             throw error;
         }
     }
 
     /**
-     * 设置数据库连接事件监听
+     * 设置数据库连接事件监听 - 简化版本
      */
     setupConnectionEvents() {
-        // 连接成功事件
-        mongoose.connection.on('connected', () => {
-            console.log('🔄 MongoDB连接已建立');
-            this.isConnected = true;
-        });
-        
-        // 连接错误事件
+        // 仅保留必要的事件监听
         mongoose.connection.on('error', (err) => {
             console.error(`❌ MongoDB连接错误: ${err.message}`);
             this.isConnected = false;
-            this.handleConnectionError(err);
         });
         
-        // 连接断开事件
         mongoose.connection.on('disconnected', () => {
             console.log('🔌 MongoDB连接已断开');
             this.isConnected = false;
         });
         
-        // 重新连接事件
-        mongoose.connection.on('reconnected', () => {
-            console.log('🔄 MongoDB连接已重新建立');
-            this.isConnected = true;
-            this.reconnectAttempts = 0;
-        });
-        
-        // 处理进程终止时的数据库断开
-        process.on('SIGINT', async () => {
-            await this.disconnect();
-            console.log('👋 MongoDB连接已关闭（进程终止）');
-            process.exit(0);
-        });
+        // 只在本地开发环境处理进程终止
+        if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'development') {
+            process.on('SIGINT', async () => {
+                await this.disconnect();
+                console.log('👋 MongoDB连接已关闭（进程终止）');
+                process.exit(0);
+            });
+        }
     }
 
     /**
-     * 处理连接错误，尝试重连
+     * 处理连接错误 - 无服务器环境版本
      */
     handleConnectionError(error) {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            console.log(`🔄 尝试重新连接数据库 (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-            
-            setTimeout(async () => {
-                try {
-                    await this.connect();
-                } catch (err) {
-                    console.error(`❌ 重连失败: ${err.message}`);
-                }
-            }, this.reconnectInterval * this.reconnectAttempts);
-        } else {
-            console.error('❌ 达到最大重连次数，放弃重连');
-        }
+        console.error(`❌ 数据库连接错误处理: ${error.message}`);
+        // 在无服务器环境中，我们不尝试自动重连
+        // 让Vercel创建一个新的函数实例
+        this.isConnected = false;
     }
 
     /**
@@ -191,9 +194,28 @@ class DatabaseService {
     }
 
     /**
-     * 初始化数据库
+     * 初始化数据库 - 优化无服务器环境
      */
     async initialize() {
+        // 使用Promise避免并发初始化
+        if (this.isInitializing) {
+            return this.initializationPromise;
+        }
+        
+        this.isInitializing = true;
+        this.initializationPromise = this._initializeDatabase();
+        
+        try {
+            return await this.initializationPromise;
+        } finally {
+            this.isInitializing = false;
+        }
+    }
+    
+    /**
+     * 内部初始化数据库方法
+     */
+    async _initializeDatabase() {
         try {
             // 确保数据库已连接
             const status = this.getConnectionStatus();
@@ -203,30 +225,29 @@ class DatabaseService {
             
             console.log('🔄 开始初始化数据库...');
             
-            // 1. 创建默认管理员用户
-            await this.createDefaultAdmin();
-            
-            // 2. 初始化索引
+            // 1. 初始化索引（最重要的步骤）
             await this.initializeIndexes();
-            
-            // 3. 填充示例数据（如果是开发环境）
-            if (config.env === 'development') {
-                await this.seedSampleData();
-            }
             
             console.log('✅ 数据库初始化完成');
             return { success: true };
         } catch (error) {
             console.error(`❌ 数据库初始化失败: ${error.message}`);
+            // 在无服务器环境中，返回失败但不抛出错误
             return { success: false, error: error.message };
         }
     }
 
     /**
-     * 创建默认管理员用户
+     * 创建默认管理员用户 - 仅用于本地开发环境
      */
     async createDefaultAdmin() {
         try {
+            // 在生产环境中跳过此操作
+            if (process.env.NODE_ENV === 'production') {
+                console.log('ℹ️  生产环境跳过创建默认管理员');
+                return;
+            }
+            
             // 检查是否已存在管理员用户
             const adminExists = await User.findOne({ role: ROLES.ADMINISTRATOR });
             
@@ -235,19 +256,19 @@ class DatabaseService {
                 const defaultAdmin = new User({
                     firstName: '系统',
                     lastName: '管理员',
-                    email: config.defaultAdminEmail,
-                    password: config.defaultAdminPassword, // 会在保存时自动加密
+                    email: 'admin@example.com',
+                    password: 'admin123', // 仅用于开发环境
                     role: ROLES.ADMINISTRATOR
                 });
                 
                 await defaultAdmin.save();
-                console.log(`✅ 默认管理员用户创建成功! 邮箱: ${config.defaultAdminEmail}`);
+                console.log('✅ 默认管理员用户创建成功! (仅开发环境)');
             } else {
                 console.log('ℹ️  管理员用户已存在，跳过创建');
             }
         } catch (error) {
             console.error(`❌ 创建默认管理员失败: ${error.message}`);
-            throw error;
+            // 开发环境允许继续执行
         }
     }
 

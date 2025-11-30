@@ -1,6 +1,13 @@
 // 加载环境变量
 require('dotenv').config();
 
+// 检查必要的环境变量
+const requiredEnvVars = ['MONGODB_URI'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (missingEnvVars.length > 0) {
+  console.warn(`⚠️  警告: 缺少必要的环境变量: ${missingEnvVars.join(', ')}`);
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -23,7 +30,12 @@ const dbService = require('./services/dbService');
 const app = express();
 
 // 中间件配置
-app.use(cors());
+app.use(cors({ 
+  origin: process.env.CORS_ORIGIN || '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -105,5 +117,10 @@ app.get('/health', async (req, res) => {
     }
 });
 
-// 启动服务器
-startServer();
+// 导出app实例供Vercel使用
+module.exports = app;
+
+// 仅在本地开发环境启动服务器
+if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV === 'development') {
+  startServer();
+}
