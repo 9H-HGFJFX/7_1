@@ -8,47 +8,8 @@
   ],
   "routes": [
     {
-      "src": "/api/health",
-      "dest": "server.js",
-      "methods": ["GET"],
-      "headers": {
-        "Cache-Control": "no-cache"
-      }
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "server.js",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      }
-    },
-    {
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ],
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "npm run build",
-  "functions": {
-    "server.js": {
-      "maxDuration": 60,
-      "memory": 1024,
-      "includeFiles": "**/*.{js,json}",
-      "excludeFiles": "**/node_modules/**",
-      "runtime": "nodejs16.x"
-    }
-  },
-  "env": {
-    "NODE_ENV": "production",
-    "VERCEL_ENV": "production"
-  },
-  "github": {
-    "silent": true
-  },
-  "settings": {
-    "debug": false
-  }
+  ]
 }
