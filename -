@@ -1,0 +1,1 @@
+{"status":"success","message":"Anti-Fake News API","version":"1.0.0","endpoints":["/api/users","/api/news","/api/vote","/api/comments","/api/health/liveness","/api/health/db"]}

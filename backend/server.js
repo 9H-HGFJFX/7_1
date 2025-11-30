@@ -103,6 +103,23 @@ app.use('/api/news', newsRoutes);
 app.use('/api/vote', voteRoutes);
 app.use('/api/comments', commentRoutes);
 
+// API root path handler - prevent 404 for /api
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'Anti-Fake News API',
+    version: '1.0.0',
+    endpoints: [
+      '/api/users',
+      '/api/news',
+      '/api/vote',
+      '/api/comments',
+      '/api/health/liveness',
+      '/api/health/db'
+    ]
+  });
+});
+
 // Lightweight health check route (database-independent)
 app.get('/api/health/liveness', (req, res) => {
   console.log(`✅ Lightweight health check request - Database-independent`);
