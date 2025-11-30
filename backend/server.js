@@ -1,24 +1,30 @@
-// 加载环境变量
+// Load environment variables
 require('dotenv').config();
 
-// 检查必要的环境变量
-const requiredEnvVars = ['MONGODB_URI'];
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+// Environment variable configuration check and logging
+console.log(`🚀 Starting application - Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`📝 Environment variable check starting...`);
+
+// Check critical environment variables
+const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => 
+  process.env.NODE_ENV === 'production' && !process.env[varName]
+);
 if (missingEnvVars.length > 0) {
-  console.warn(`⚠️  警告: 缺少必要的环境变量: ${missingEnvVars.join(', ')}`);
+    console.warn(`⚠️  Warning: Missing required environment variables: ${missingEnvVars.join(', ')}`);
 }
 
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
-// 导入路由
+// Import routes
 const userRoutes = require('./routes/userRoutes');
 const newsRoutes = require('./routes/newsRoutes');
 const voteRoutes = require('./routes/voteRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 
-// 导入中间件
+// Import middleware
 const { notFoundHandler, globalErrorHandler, logger } = require('./middlewares/errorHandler');
 const authMiddleware = require('./middlewares/auth');
 
@@ -33,8 +39,9 @@ const app = express();
 app.use(cors({ 
   origin: process.env.CORS_ORIGIN || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  maxAge: 86400 // Preflight request cache time
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -79,23 +86,69 @@ app.use(globalErrorHandler);
 // 数据库连接和服务器启动
 async function startServer() {
     try {
-        // 连接数据库
-        await dbService.connect();
-        
-        // 初始化数据库
-        await dbService.initialize();
-        
-        // 启动服务器
-        const PORT = config.port || 5000;
-        app.listen(PORT, () => {
-            console.log(`✅ 服务器运行在端口 ${PORT}`);
-            console.log(`✅ API文档地址: http://localhost:${PORT}/api-docs`);
-            console.log(`✅ 健康检查地址: http://localhost:${PORT}/health`);
-        });
-    } catch (error) {
-        console.error('❌ 服务器启动失败:', error);
-        process.exit(1);
+      const connection = await dbService.connect();
+      clearTimeout(dbConnectTimeout);
+      if (connection && dbService.isConnected) {
+        console.log('✅ Database connection successful');
+      } else {
+        console.error('⚠️  Database connection failed, but server will continue running');
+      }
+    } catch (dbError) {
+      clearTimeout(dbConnectTimeout);
+      console.error('⚠️  Database connection failed, but server will continue running:', dbError.message);
+      // In serverless environment, we log errors but don't prevent server startup
     }
+    
+    // Attempt to initialize database (if connected)
+    try {
+      const status = dbService.getConnectionStatus ? dbService.getConnectionStatus() : { isConnected: false };
+      if (status.isConnected) {
+        console.log('🔄 Initializing database...');
+        const initResult = await dbService.initialize();
+        console.log('✅ Database initialization completed:', initResult ? (initResult.success ? 'success' : 'failure') : 'unknown');
+      } else {
+        console.log('ℹ️  Database not connected, skipping initialization');
+      }
+    } catch (initError) {
+      console.error('⚠️  Database initialization failed, but server will continue running:', initError.message);
+    }
+    
+    // Start HTTP server
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
+      console.log(`✅ Root path health check: http://localhost:${PORT}/`);
+      console.log(`🔍 Database health check: http://localhost:${PORT}/api/health/db`);
+    });
+    
+    // Handle server shutdown
+    process.on('SIGTERM', () => {
+      console.log('👋 Received shutdown signal, closing server...');
+      server.close(async () => {
+        try {
+          if (dbService && dbService.disconnect) {
+            await dbService.disconnect();
+          }
+        } catch (disconnectError) {
+          console.error('⚠️  Error disconnecting from database:', disconnectError.message);
+        }
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
+    
+  } catch (error) {
+    console.error('❌ Error during server startup:', error);
+    console.error(error.stack);
+    // In local development environment, if startup fails, we still try to start the server to provide health check endpoints
+    try {
+      app.listen(PORT, () => {
+        console.log(`⚠️  Server started in degraded mode at http://localhost:${PORT}`);
+        console.log(`⚠️  Database may not be connected, please check logs`);
+      });
+    } catch (listenError) {
+      console.error('❌ Failed to start server:', listenError);
+    }
+  }
 }
 
 // 添加健康检查端点

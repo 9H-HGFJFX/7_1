@@ -1,26 +1,26 @@
 const mongoose = require('mongoose');
 
-// 新闻状态枚举
+// News Status Enums
 const NEWS_STATUS = {
     FAKE: 'Fake',
     NOT_FAKE: 'Not Fake',
     PENDING: 'Pending'
 };
 
-// 新闻模型Schema
+// News Model Schema
 const newsSchema = new mongoose.Schema({
     title: {
         type: String,
-        required: [true, '新闻主题不能为空'],
+        required: [true, 'News title cannot be empty'],
         trim: true,
-        minlength: [5, '新闻主题至少需要5个字符'],
-        maxlength: [200, '新闻主题不能超过200个字符']
+        minlength: [5, 'News title must be at least 5 characters'],
+        maxlength: [200, 'News title cannot exceed 200 characters']
     },
     content: {
         type: String,
-        required: [true, '新闻详情不能为空'],
+        required: [true, 'News content cannot be empty'],
         trim: true,
-        minlength: [10, '新闻详情至少需要10个字符']
+        minlength: [10, 'News content must be at least 10 characters']
     },
     status: {
         type: String,
@@ -30,7 +30,7 @@ const newsSchema = new mongoose.Schema({
     authorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: [true, '提交人ID不能为空']
+        required: [true, 'Author ID cannot be empty']
     },
     images: [{
         type: String,
@@ -56,34 +56,34 @@ const newsSchema = new mongoose.Schema({
     }
 });
 
-// 更新时间中间件
+// Update time middleware
 newsSchema.pre('save', function(next) {
     this.updatedAt = Date.now();
     next();
 });
 
-// 计算总投票数方法
+// Method to calculate total votes
 newsSchema.methods.getTotalVotes = function() {
     return this.fakeVoteCount + this.notFakeVoteCount;
 };
 
-// 计算假新闻投票百分比方法
+// Method to calculate fake news vote percentage
 newsSchema.methods.getFakeVotePercentage = function() {
     const totalVotes = this.getTotalVotes();
     return totalVotes > 0 ? (this.fakeVoteCount / totalVotes) * 100 : 0;
 };
 
-// 更新投票计数方法
+// Method to update vote counts
 newsSchema.methods.updateVoteCounts = function(fakeCount, notFakeCount) {
     this.fakeVoteCount = fakeCount;
     this.notFakeVoteCount = notFakeCount;
 };
 
-// 根据投票结果更新新闻状态方法
+// Method to update news status based on votes
 newsSchema.methods.updateStatusBasedOnVotes = function(minVotes = 10, fakeThreshold = 0.6) {
     const totalVotes = this.getTotalVotes();
     
-    // 如果投票数达到阈值，根据比例判断新闻真假
+    // If vote count reaches threshold, determine news authenticity based on ratio
     if (totalVotes >= minVotes) {
         const fakePercentage = this.getFakeVotePercentage();
         
@@ -99,7 +99,7 @@ newsSchema.methods.updateStatusBasedOnVotes = function(minVotes = 10, fakeThresh
     return this.status;
 };
 
-// 静态方法：获取新闻列表（支持分页、筛选、搜索）
+// Static method: Get news list (with pagination, filtering, and search)
 newsSchema.statics.getNewsList = async function(filters = {}, options = {}) {
     const {
         page = 1,
@@ -108,20 +108,20 @@ newsSchema.statics.getNewsList = async function(filters = {}, options = {}) {
         sortOrder = 'desc'
     } = options;
     
-    // 构建查询条件
+    // Build query conditions
     const query = {};
     
-    // 状态筛选
+    // Status filtering
     if (filters.status && filters.status !== 'all') {
         query.status = filters.status;
     }
     
-    // 提交人筛选
+    // Author filtering
     if (filters.authorId) {
         query.authorId = filters.authorId;
     }
     
-    // 搜索功能
+    // Search functionality
     if (filters.search) {
         const searchRegex = new RegExp(filters.search, 'i');
         query.$or = [
@@ -130,18 +130,18 @@ newsSchema.statics.getNewsList = async function(filters = {}, options = {}) {
         ];
     }
     
-    // 计算总数
+    // Calculate total count
     const total = await this.countDocuments(query);
     
-    // 计算分页参数
+    // Calculate pagination parameters
     const skip = (page - 1) * pageSize;
     const pageCount = Math.ceil(total / pageSize);
     
-    // 构建排序对象
+    // Build sort object
     const sortObject = {};
     sortObject[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
-    // 查询数据
+    // Query data
     const news = await this.find(query)
         .populate('authorId', 'firstName lastName email')
         .sort(sortObject)
@@ -149,11 +149,11 @@ newsSchema.statics.getNewsList = async function(filters = {}, options = {}) {
         .limit(pageSize)
         .lean();
     
-    // 格式化返回数据
+    // Format return data
     const formattedNews = news.map(item => {
         return {
             ...item,
-            authorName: item.authorId ? `${item.authorId.firstName} ${item.authorId.lastName}` : '未知用户',
+            authorName: item.authorId ? `${item.authorId.firstName} ${item.authorId.lastName}` : 'Unknown User',
             authorId: item.authorId?._id || item.authorId
         };
     });
@@ -167,10 +167,10 @@ newsSchema.statics.getNewsList = async function(filters = {}, options = {}) {
     };
 };
 
-// 创建新闻模型
+// Create news model
 const News = mongoose.model('News', newsSchema);
 
-// 导出模型和常量
+// Export model and constants
 module.exports = {
     News,
     NEWS_STATUS

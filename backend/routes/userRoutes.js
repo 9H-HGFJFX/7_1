@@ -7,20 +7,20 @@ const { successResponse, errorResponse, paginatedResponse } = require('../middle
 const router = express.Router();
 
 /**
- * 用户注册
+ * User Registration
  */
 router.post('/register', [
     // 验证请求数据
-    body('firstName').notEmpty().withMessage('名字不能为空'),
-    body('lastName').notEmpty().withMessage('姓氏不能为空'),
-    body('email').isEmail().withMessage('请输入有效的邮箱地址'),
-    body('password').isLength({ min: 6 }).withMessage('密码至少需要6个字符')
+    body('firstName').notEmpty().withMessage('First name cannot be empty'),
+    body('lastName').notEmpty().withMessage('Last name cannot be empty'),
+    body('email').isEmail().withMessage('Please enter a valid email address'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { firstName, lastName, email, password } = req.body;
@@ -28,7 +28,7 @@ router.post('/register', [
         // 检查邮箱是否已存在
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json(errorResponse(400, '邮箱已被注册', { email: '该邮箱已存在' }));
+            return res.status(400).json(errorResponse(400, 'Email already registered', { email: 'This email already exists' }));
         }
         
         // 创建新用户（默认角色为Reader）
@@ -57,24 +57,24 @@ router.post('/register', [
                 createdAt: newUser.createdAt
             },
             token
-        }, '注册成功'));
+        }, 'Registration successful'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 用户登录
+ * User Login
  */
 router.post('/login', [
-    body('email').isEmail().withMessage('请输入有效的邮箱地址'),
-    body('password').notEmpty().withMessage('密码不能为空')
+    body('email').isEmail().withMessage('Please enter a valid email address'),
+    body('password').notEmpty().withMessage('Password cannot be empty')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         const { email, password } = req.body;
@@ -83,7 +83,7 @@ router.post('/login', [
         const user = await User.findOne({ email }).select('+password');
         
         if (!user) {
-            return res.status(401).json(errorResponse(401, '邮箱或密码错误', { credentials: '验证失败' }));
+            return res.status(401).json(errorResponse(401, 'Invalid email or password', { credentials: 'Authentication failed' }));
         }
         
         // 验证密码
@@ -108,14 +108,14 @@ router.post('/login', [
                 createdAt: user.createdAt
             },
             token
-        }, '登录成功'));
+        }, 'Login successful'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 获取当前用户信息
+ * Get Current User Information
  */
 router.get('/me', authenticate, async (req, res, next) => {
     try {
@@ -127,24 +127,24 @@ router.get('/me', authenticate, async (req, res, next) => {
             role: req.user.role,
             avatar: req.user.avatar,
             createdAt: req.user.createdAt
-        }, '获取用户信息成功'));
+        }, 'User information retrieved successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 更新当前用户信息
+ * Update Current User Information
  */
 router.put('/me', authenticate, [
-    body('firstName').optional().notEmpty().withMessage('名字不能为空'),
-    body('lastName').optional().notEmpty().withMessage('姓氏不能为空')
+    body('firstName').optional().notEmpty().withMessage('First name cannot be empty'),
+    body('lastName').optional().notEmpty().withMessage('Last name cannot be empty')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json(errorResponse(400, '验证失败', errors.mapped()));
+            return res.status(400).json(errorResponse(400, 'Validation failed', errors.mapped()));
         }
         
         // 提取可更新字段
@@ -161,7 +161,7 @@ router.put('/me', authenticate, [
         );
         
         if (!updatedUser) {
-            return res.status(404).json(errorResponse(404, '用户不存在'));
+            return res.status(404).json(errorResponse(404, 'User not found'));
         }
         
         return res.json(successResponse({
@@ -172,14 +172,14 @@ router.put('/me', authenticate, [
             role: updatedUser.role,
             avatar: updatedUser.avatar,
             createdAt: updatedUser.createdAt
-        }, '用户信息更新成功'));
+        }, 'User information updated successfully'));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：获取用户列表
+ * Admin: Get User List
  */
 router.get('/', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -188,12 +188,12 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
         // 构建查询条件
         const query = {};
         
-        // 角色筛选
+        // Role filtering
         if (role && Object.values(ROLES).includes(role)) {
             query.role = role;
         }
         
-        // 搜索功能
+        // Search functionality
         if (search) {
             const searchRegex = new RegExp(search, 'i');
             query.$or = [
@@ -203,14 +203,14 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
             ];
         }
         
-        // 计算总数
+        // Calculate total count
         const total = await User.countDocuments(query);
         
-        // 计算分页参数
+        // Calculate pagination parameters
         const skip = (page - 1) * pageSize;
         const pageCount = Math.ceil(total / pageSize);
         
-        // 查询数据
+        // Query data
         const users = await User.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
@@ -223,7 +223,7 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
             Number(page),
             Number(pageSize),
             pageCount,
-            '获取用户列表成功'
+            'User list retrieved successfully'
         ));
     } catch (error) {
         next(error);
@@ -231,10 +231,10 @@ router.get('/', authenticate, isAdmin, async (req, res, next) => {
 });
 
 /**
- * 管理员：设置用户角色（升级为Member）
+ * Admin: Set User Role (Upgrade to Member)
  */
 router.put('/:userId/role', authenticate, isAdmin, [
-    body('role').isIn([ROLES.MEMBER, ROLES.READER]).withMessage('无效的角色')
+    body('role').isIn([ROLES.MEMBER, ROLES.READER]).withMessage('Invalid role')
 ], async (req, res, next) => {
     try {
         // 检查验证错误
@@ -246,9 +246,9 @@ router.put('/:userId/role', authenticate, isAdmin, [
         const { userId } = req.params;
         const { role } = req.body;
         
-        // 不能将用户设置为管理员，管理员只能在数据库中直接设置
+        // Cannot set user as administrator, administrator can only be set directly in the database
         if (role === ROLES.ADMINISTRATOR) {
-            return res.status(403).json(errorResponse(403, '无法通过API设置管理员角色'));
+            return res.status(403).json(errorResponse(403, 'Cannot set administrator role via API'));
         }
         
         // 查找并更新用户
@@ -259,7 +259,7 @@ router.put('/:userId/role', authenticate, isAdmin, [
         );
         
         if (!updatedUser) {
-            return res.status(404).json(errorResponse(404, '用户不存在'));
+            return res.status(404).json(errorResponse(404, 'User not found'));
         }
         
         return res.json(successResponse({
@@ -268,14 +268,14 @@ router.put('/:userId/role', authenticate, isAdmin, [
             lastName: updatedUser.lastName,
             email: updatedUser.email,
             role: updatedUser.role
-        }, `用户角色已更新为${role}`));
+        }, `User role has been updated to ${role}`));
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * 管理员：获取用户详情
+ * Admin: Get User Details
  */
 router.get('/:userId', authenticate, isAdmin, async (req, res, next) => {
     try {
@@ -284,10 +284,10 @@ router.get('/:userId', authenticate, isAdmin, async (req, res, next) => {
         const user = await User.findById(userId).select('-password');
         
         if (!user) {
-            return res.status(404).json(errorResponse(404, '用户不存在'));
+            return res.status(404).json(errorResponse(404, 'User not found'));
         }
         
-        return res.json(successResponse(user, '获取用户详情成功'));
+        return res.json(successResponse(user, 'User details retrieved successfully'));
     } catch (error) {
         next(error);
     }

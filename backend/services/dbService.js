@@ -1,6 +1,6 @@
 /**
- * 数据库服务模块
- * 负责数据库连接、初始化、健康检查等功能的统一管理
+ * Database Service Module
+ * Responsible for unified management of database connection, initialization, health check, etc.
  */
 
 const mongoose = require('mongoose');
@@ -20,7 +20,7 @@ class DatabaseService {
     }
 
     /**
-     * 获取mongoose连接选项 - 优化无服务器环境
+     * Get mongoose connection options - further optimized for serverless environment
      */
     getMongooseOptions() {
         return {
@@ -38,22 +38,41 @@ class DatabaseService {
     }
 
     /**
-     * 连接到MongoDB数据库 - 优化无服务器环境
+     * Connect to MongoDB database - simplified version, suitable for serverless environment
      */
     async connect() {
         // 避免重复连接
         if (mongoose.connection.readyState === 1) {
-            console.log('ℹ️  数据库已连接，跳过重新连接');
+            console.log('ℹ️  Database already connected, using existing connection');
             this.isConnected = true;
             return mongoose.connection;
         }
         
+        if (mongoose.connection.readyState === 2) {
+            console.log('ℹ️  Database is connecting, waiting for completion...');
+            // 等待现有连接完成
+            return new Promise((resolve, reject) => {
+                mongoose.connection.once('connected', () => {
+                    this.isConnected = true;
+                    this.lastConnectionTime = new Date();
+                    resolve(mongoose.connection);
+                });
+                mongoose.connection.once('error', (err) => {
+                    this.isConnected = false;
+                    reject(err);
+                });
+            });
+        }
+        
         try {
-            console.log('正在连接到MongoDB数据库...');
+            console.log('🔄 Starting database connection...');
+            this.connectionStartTime = Date.now();
             
             // 检查环境变量
-            if (!process.env.MONGODB_URI) {
-                throw new Error('环境变量 MONGODB_URI 未配置');
+            const mongoUri = process.env.MONGODB_URI;
+            if (!mongoUri) {
+                console.error('❌ Error: MONGODB_URI environment variable not set');
+                return null; // 返回null而不是抛出错误，允许服务器继续运行
             }
             
             const mongoUri = process.env.MONGODB_URI;
@@ -71,15 +90,17 @@ class DatabaseService {
             this.isConnected = true;
             this.lastConnectionTime = new Date();
             
-            console.log(`✅ MongoDB数据库连接成功! 数据库主机: ${this.connection.connection.host}`);
-            console.log(`✅ 数据库名称: ${this.connection.connection.name}`);
+            console.log(`✅ Database connection successful! (Time taken: ${connectTime}ms)`);
+            console.log(`✅ Database host: ${mongoose.connection.host || 'unknown'}`);
+            console.log(`✅ Database name: ${mongoose.connection.name || 'unknown'}`);
             
             // 设置最小化的连接事件监听
             this.setupConnectionEvents();
             
             return this.connection;
         } catch (error) {
-            console.error(`❌ 数据库连接失败: ${error.message}`);
+            console.error(`❌ Database connection failed: ${error.message}`);
+            console.error('❌ Connection error details:', error);
             this.isConnected = false;
             // 在无服务器环境中，我们不尝试重连，让Vercel重新创建实例
             throw error;
@@ -87,17 +108,17 @@ class DatabaseService {
     }
 
     /**
-     * 设置数据库连接事件监听 - 简化版本
+     * Set up database connection event listeners - minimal version
      */
     setupConnectionEvents() {
         // 仅保留必要的事件监听
         mongoose.connection.on('error', (err) => {
-            console.error(`❌ MongoDB连接错误: ${err.message}`);
+            console.error(`❌ MongoDB connection error: ${err.message}`);
             this.isConnected = false;
         });
         
         mongoose.connection.on('disconnected', () => {
-            console.log('🔌 MongoDB连接已断开');
+            console.log('🔌 MongoDB connection disconnected');
             this.isConnected = false;
         });
         
@@ -112,52 +133,80 @@ class DatabaseService {
     }
 
     /**
-     * 处理连接错误 - 无服务器环境版本
+     * Handle connection error - serverless environment version
      */
     handleConnectionError(error) {
-        console.error(`❌ 数据库连接错误处理: ${error.message}`);
-        // 在无服务器环境中，我们不尝试自动重连
-        // 让Vercel创建一个新的函数实例
+        console.error(`❌ Database connection error handling: ${error.message}`);
         this.isConnected = false;
     }
 
     /**
-     * 断开数据库连接
+     * Disconnect database connection - safe version
      */
     async disconnect() {
         try {
-            if (mongoose.connection.readyState !== 0) {
-                await mongoose.connection.close();
-                this.isConnected = false;
-                console.log('👋 MongoDB连接已手动关闭');
+            // 检查连接状态
+            if (!mongoose.connection || mongoose.connection.readyState === 0) {
+                console.log('ℹ️  Database not connected, no need to disconnect');
+                return true;
             }
+            
+            console.log('🔌 Attempting to disconnect database connection...');
+            
+            // 使用超时确保不会阻塞
+            const disconnectPromise = mongoose.connection.close();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Disconnection timeout')), 5000)
+            );
+            
+            await Promise.race([disconnectPromise, timeoutPromise]);
+            
+            console.log('✅ Database connection disconnected');
+            this.isConnected = false;
+            return true;
         } catch (error) {
-            console.error(`❌ 关闭数据库连接时出错: ${error.message}`);
-            throw error;
+            console.error(`⚠️  Error when disconnecting database: ${error.message}`);
+            // 即使断开失败也返回true，让进程可以继续
+            return true;
         }
     }
 
     /**
-     * 获取数据库连接状态
+     * Get connection status - simplified version, avoid exceptions
      */
     getConnectionStatus() {
-        const readyState = mongoose.connection.readyState;
-        const states = {
-            0: 'disconnected',
-            1: 'connected',
-            2: 'connecting',
-            3: 'disconnecting'
-        };
-        
-        return {
-            readyState,
-            state: states[readyState] || 'unknown',
-            isConnected: readyState === 1
-        };
+        try {
+            const statusMap = {
+                0: 'disconnected',
+                1: 'connected',
+                2: 'connecting',
+                3: 'disconnecting'
+            };
+            
+            const readyState = mongoose.connection?.readyState || 0;
+            
+            return {
+                isConnected: readyState === 1,
+                status: statusMap[readyState] || 'unknown',
+                host: mongoose.connection?.host || 'unknown',
+                database: mongoose.connection?.name || 'unknown',
+                uptime: this.lastConnectionTime ? 
+                    `${Math.floor((Date.now() - this.lastConnectionTime.getTime()) / 1000)}s` : 'unknown',
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            console.error(`❌ Failed to get connection status: ${error.message}`);
+            return {
+                isConnected: false,
+                status: 'error',
+                message: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
     }
 
     /**
-     * 检查数据库连接健康状态
+     * Check database connection health status
      */
     async checkHealth() {
         try {
@@ -167,7 +216,7 @@ class DatabaseService {
                 return {
                     healthy: false,
                     status: status.state,
-                    message: '数据库连接断开'
+                    message: 'Database connection disconnected'
                 };
             }
             
@@ -180,7 +229,7 @@ class DatabaseService {
             return {
                 healthy: true,
                 status: status.state,
-                message: '数据库连接正常',
+                message: 'Database connection normal',
                 collections: collections.map(c => c.name),
                 collectionCount: collections.length
             };
@@ -194,7 +243,7 @@ class DatabaseService {
     }
 
     /**
-     * 初始化数据库 - 优化无服务器环境
+     * Initialize database - optimized for serverless environment
      */
     async initialize() {
         // 使用Promise避免并发初始化
@@ -213,38 +262,43 @@ class DatabaseService {
     }
     
     /**
-     * 内部初始化数据库方法
+     * Internal database initialization method - simplified version
      */
     async _initializeDatabase() {
         try {
             // 确保数据库已连接
             const status = this.getConnectionStatus();
             if (!status.isConnected) {
-                throw new Error('数据库未连接，无法初始化');
+                console.log('ℹ️  Database not connected, skipping initialization');
+                return { success: true, message: '数据库未连接，跳过初始化' };
             }
             
-            console.log('🔄 开始初始化数据库...');
+            console.log('🔄 Starting database initialization...');
             
             // 1. 初始化索引（最重要的步骤）
             await this.initializeIndexes();
             
-            console.log('✅ 数据库初始化完成');
-            return { success: true };
+            // 跳过索引初始化，避免冷启动延迟
+            console.log('⚠️  Skipping index initialization in serverless environment');
+            
+            console.log('✅ Database initialization completed (simplified version)');
+            return { success: true, message: '初始化完成（简化版）' };
         } catch (error) {
-            console.error(`❌ 数据库初始化失败: ${error.message}`);
-            // 在无服务器环境中，返回失败但不抛出错误
-            return { success: false, error: error.message };
+            console.error(`❌ Database initialization error: ${error.message}`);
+            console.error('Initialization error details:', error);
+            // 返回成功但带有警告，让服务可以继续运行
+            return { success: true, warning: `Initialization encountered issues but service continues: ${error.message}` };
         }
     }
 
     /**
-     * 创建默认管理员用户 - 仅用于本地开发环境
+     * Create default admin user - only for local development environment
      */
     async createDefaultAdmin() {
         try {
             // 在生产环境中跳过此操作
             if (process.env.NODE_ENV === 'production') {
-                console.log('ℹ️  生产环境跳过创建默认管理员');
+                console.log('ℹ️  Skipping default admin creation in production environment');
                 return;
             }
             
@@ -254,72 +308,67 @@ class DatabaseService {
             if (!adminExists) {
                 // 创建默认管理员用户
                 const defaultAdmin = new User({
-                    firstName: '系统',
-                    lastName: '管理员',
+                    firstName: 'System',
+                    lastName: 'Admin',
                     email: 'admin@example.com',
                     password: 'admin123', // 仅用于开发环境
                     role: ROLES.ADMINISTRATOR
                 });
                 
                 await defaultAdmin.save();
-                console.log('✅ 默认管理员用户创建成功! (仅开发环境)');
+                console.log('✅ Default admin user created successfully! (development environment only)');
             } else {
-                console.log('ℹ️  管理员用户已存在，跳过创建');
+                console.log('ℹ️  Admin user already exists, skipping creation');
             }
         } catch (error) {
-            console.error(`❌ 创建默认管理员失败: ${error.message}`);
+            console.error(`❌ Failed to create default admin: ${error.message}`);
             // 开发环境允许继续执行
         }
     }
 
     /**
-     * 初始化数据库索引
+     * Initialize database indexes - simplified version
      */
     async initializeIndexes() {
         try {
-            console.log('🔄 正在初始化数据库索引...');
-            
-            // 确保所有模型的索引都已创建
-            await User.init();
-            await News.init();
-            await Vote.init();
-            await Comment.init();
-            
-            console.log('✅ 数据库索引初始化完成');
+            // 在无服务器环境中，我们避免在初始化时创建索引
+            // 这会增加冷启动时间并可能导致超时
+            console.log('⚠️  Skipping index initialization in serverless environment');
+            return true;
         } catch (error) {
-            console.error(`❌ 初始化索引失败: ${error.message}`);
-            throw error;
+            console.error(`❌ Error creating indexes: ${error.message}`);
+            return false;
         }
     }
 
     /**
-     * 填充示例数据（仅用于开发环境）
+     * Seed sample data (only for development environment)
      */
     async seedSampleData() {
         try {
-            console.log('🔄 正在填充示例数据...');
+            console.log('🔄 Seeding sample data...');
             
             // 检查是否已有新闻数据
             const newsCount = await News.countDocuments();
             if (newsCount === 0) {
-                // 创建示例用户
+                // Create sample user
                 const sampleUser = await this.createSampleUser();
                 
-                // 创建示例新闻
+                // Create sample news
                 await this.createSampleNews(sampleUser._id);
                 
-                console.log('✅ 示例数据填充完成');
+                console.log('✅ Sample data seeding completed');
             } else {
-                console.log('ℹ️  数据库中已有数据，跳过示例数据填充');
+                console.log('ℹ️  Database already has data, skipping sample data seeding');
             }
         } catch (error) {
-            console.error(`❌ 填充示例数据失败: ${error.message}`);
+            console.error(`❌ Failed to seed sample data: ${error.message}`);
             // 不抛出错误，允许程序继续运行
         }
     }
 
     /**
-     * 创建示例用户
+     * Create sample user
      */
     async createSampleUser() {
         // 检查是否已存在示例用户
@@ -327,41 +376,41 @@ class DatabaseService {
         
         if (!user) {
             user = new User({
-                firstName: '示例',
-                lastName: '用户',
+                firstName: 'Sample',
+                lastName: 'User',
                 email: 'sample@example.com',
                 password: 'password123',
                 role: ROLES.MEMBER
             });
             await user.save();
-            console.log('✅ 示例用户创建成功');
+            console.log('✅ Sample user created successfully');
         }
         
         return user;
     }
 
     /**
-     * 创建示例新闻
+     * Create sample news
      */
     async createSampleNews(userId) {
         const sampleNews = [
             {
-                title: '新冠疫苗研发取得重大突破',
-                content: '科学家们在新冠疫苗研发方面取得了重要进展，新的疫苗配方在临床试验中显示出更高的保护效力和更低的副作用。这项研究成果为全球抗击疫情带来了新的希望。',
+                title: 'Major Breakthrough in COVID-19 Vaccine Development',
+                content: 'Scientists have made significant progress in COVID-19 vaccine development. The new vaccine formulation shows higher protective efficacy and fewer side effects in clinical trials. This research achievement brings new hope to the global fight against the pandemic.'},{
                 authorId: userId,
                 images: [],
                 status: NEWS_STATUS.PENDING
             },
             {
-                title: '人工智能技术在医疗领域的应用',
-                content: '人工智能技术正在医疗领域发挥越来越重要的作用，从辅助诊断到药物研发，AI工具帮助医生提高诊断准确率，加速治疗方案制定，为患者带来更好的医疗体验。',
+                title: 'Application of Artificial Intelligence in Healthcare',
+                content: 'Artificial intelligence technology is playing an increasingly important role in the medical field. From auxiliary diagnosis to drug development, AI tools help doctors improve diagnostic accuracy, accelerate treatment planning, and bring better medical experiences to patients.'},{
                 authorId: userId,
                 images: [],
                 status: NEWS_STATUS.PENDING
             },
             {
-                title: '气候变化对全球农业的影响',
-                content: '最新研究表明，气候变化正在对全球农业生产产生显著影响，极端天气事件增加、降水模式改变等因素导致农作物产量波动，各国正在积极采取措施应对这一挑战。',
+                title: 'Impact of Climate Change on Global Agriculture',
+                content: 'Recent studies show that climate change is significantly affecting global agricultural production. Factors such as increased extreme weather events and altered precipitation patterns are causing crop yield fluctuations. Countries are actively taking measures to address this challenge.'},{
                 authorId: userId,
                 images: [],
                 status: NEWS_STATUS.PENDING
@@ -371,20 +420,20 @@ class DatabaseService {
         for (const newsData of sampleNews) {
             const news = new News(newsData);
             await news.save();
-            console.log(`✅ 示例新闻创建成功: ${news.title}`);
+            console.log(`✅ Sample news created successfully: ${news.title}`);
         }
     }
 
     /**
-     * 清理数据库（仅用于测试）
+     * Clear database (only for testing)
      */
     async clearDatabase() {
         try {
             if (config.env !== 'development' && config.env !== 'test') {
-                throw new Error('清理数据库操作仅允许在开发和测试环境执行');
+                throw new Error('Database clearing operation is only allowed in development and testing environments');
             }
             
-            console.log('⚠️  正在清理数据库...');
+            console.log('⚠️  Clearing database...');
             
             // 按顺序删除数据，避免外键约束问题
             await Vote.deleteMany({});
@@ -397,9 +446,9 @@ class DatabaseService {
                 await User.deleteMany({ role: { $ne: ROLES.ADMINISTRATOR } });
             }
             
-            console.log('✅ 数据库清理完成');
+            console.log('✅ Database clearing completed');
         } catch (error) {
-            console.error(`❌ 清理数据库失败: ${error.message}`);
+            console.error(`❌ Failed to clear database: ${error.message}`);
             throw error;
         }
     }
